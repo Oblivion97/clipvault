@@ -1,0 +1,675 @@
+#!/usr/bin/env python3
+"""
+ClipVault — Windows-style Clipboard Manager for Linux
+Win+V opens clipboard history. Click or Enter to paste.
+"""
+
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gtk, Gdk, GLib, GdkPixbuf, Pango
+
+import os, sys, json, hashlib, base64, threading, time, subprocess, signal, re
+from datetime import datetime
+
+# ── Config ────────────────────────────────────────────────────────────────────
+MAX_ITEMS    = 200
+CONFIG_DIR   = os.path.expanduser('~/.config/clipvault')
+HISTORY_FILE = os.path.join(CONFIG_DIR, 'history.json')
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def classify(text):
+    t = text.strip()
+    if re.match(r'^https?://\S+$', t):
+        return 'link'
+    if '\n' in t and any(t.startswith(p) for p in
+                         ('def ', 'function ', 'class ', '#!', 'import ', '<', '{')):
+        return 'code'
+    return 'text'
+
+def time_ago(iso):
+    try:
+        dt = datetime.fromisoformat(iso)
+        s  = int((datetime.now() - dt).total_seconds())
+        if s < 60:    return 'just now'
+        if s < 3600:  return f'{s//60}m ago'
+        if s < 86400: return f'{s//3600}h ago'
+        return dt.strftime('%b %d')
+    except:
+        return ''
+
+# ── Data model ────────────────────────────────────────────────────────────────
+class ClipItem:
+    def __init__(self, ctype, content, ts=None):
+        self.ctype   = ctype
+        self.content = content
+        self.ts      = ts or datetime.now().isoformat()
+        self.hash    = hashlib.md5(content.encode('utf-8', errors='ignore')).hexdigest()
+
+    def preview(self, maxlen=70):
+        if self.ctype == 'image':
+            return '[Image]'
+        t = self.content.strip().replace('\n', ' ').replace('\r', '')
+        return t[:maxlen] + ('…' if len(t) > maxlen else '')
+
+    def to_dict(self):
+        return {'ctype': self.ctype, 'content': self.content, 'ts': self.ts}
+
+    @staticmethod
+    def from_dict(d):
+        return ClipItem(d['ctype'], d['content'], d.get('ts'))
+
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
+CSS = b"""
+window.cv-win {
+    background-color: #1a1a1a;
+    border: 2px solid #444;
+}
+.cv-header {
+    background-color: #000000;
+    padding: 12px 14px 10px 14px;
+    border-bottom: 2px solid #444;
+}
+.cv-title {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+}
+.cv-count {
+    color: #aaa;
+    font-size: 11px;
+}
+.cv-search {
+    background-color: #2a2a2a;
+    border: 1px solid #555;
+    color: #ffffff;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+.cv-search:focus {
+    border-color: #ffffff;
+}
+.cv-listbox {
+    background-color: #1a1a1a;
+}
+.cv-listbox row {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #2e2e2e;
+}
+.cv-listbox row:hover {
+    background-color: #2a2a2a;
+}
+.cv-listbox row:selected,
+.cv-listbox row:selected:focus {
+    background-color: #ffffff;
+}
+.cv-listbox row:selected .cv-preview,
+.cv-listbox row:selected:focus .cv-preview {
+    color: #000000;
+}
+.cv-listbox row:selected .cv-meta,
+.cv-listbox row:selected:focus .cv-meta,
+.cv-listbox row:selected .cv-badge,
+.cv-listbox row:selected:focus .cv-badge {
+    color: #555555;
+}
+.cv-item-box {
+    padding: 10px 12px;
+}
+.cv-preview {
+    color: #ffffff;
+    font-size: 13px;
+}
+.cv-meta {
+    color: #888;
+    font-size: 11px;
+}
+.cv-badge {
+    color: #666;
+    font-size: 10px;
+    font-family: monospace;
+}
+.cv-footer {
+    background-color: #000000;
+    padding: 8px 12px;
+    border-top: 2px solid #444;
+}
+.cv-hint {
+    color: #555;
+    font-size: 11px;
+}
+.cv-empty {
+    color: #555;
+    font-size: 13px;
+}
+button.cv-clear {
+    background-color: #1a1a1a;
+    border: 1px solid #883333;
+    color: #ff6666;
+    font-size: 11px;
+    padding: 2px 10px;
+}
+button.cv-clear:hover {
+    background-color: #331111;
+}
+"""
+
+# ── Window ────────────────────────────────────────────────────────────────────
+class ClipWindow(Gtk.Window):
+
+    def __init__(self, app):
+        super().__init__(type=Gtk.WindowType.TOPLEVEL)
+        self.app             = app
+        self._pasting        = False   # guard: prevent double-paste
+        self._ignore_fo      = False   # ignore focus-out briefly on open
+
+        self.set_title("ClipVault")
+        self.set_default_size(460, 560)
+        self.set_resizable(False)
+        self.set_decorated(True)
+        self.set_keep_above(True)
+        self.set_skip_taskbar_hint(True)
+        self.set_skip_pager_hint(True)
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        self.get_style_context().add_class('cv-win')
+
+        self.connect('delete-event', lambda *_: self._dismiss() or True)
+        self.connect('focus-out-event', self._on_window_focus_out)
+
+        # Load CSS once
+        p = Gtk.CssProvider()
+        p.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), p,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        self._build()
+
+    # ── Build UI ──────────────────────────────────────────────────
+    def _build(self):
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.add(root)
+
+        # Header
+        hdr = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        hdr.get_style_context().add_class('cv-header')
+
+        title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        lbl = Gtk.Label(label="📋  Clipboard History")
+        lbl.get_style_context().add_class('cv-title')
+        lbl.set_halign(Gtk.Align.START)
+        title_row.pack_start(lbl, True, True, 0)
+        self.lbl_count = Gtk.Label()
+        self.lbl_count.get_style_context().add_class('cv-count')
+        title_row.pack_end(self.lbl_count, False, False, 0)
+        hdr.pack_start(title_row, False, False, 0)
+
+        self.search = Gtk.SearchEntry()
+        self.search.set_placeholder_text("  Search…")
+        self.search.get_style_context().add_class('cv-search')
+        self.search.connect('changed', self._on_search_changed)
+        # Enter in search box → paste selected item
+        self.search.connect('activate', self._on_search_enter)
+        # Escape / arrows in search box
+        self.search.connect('key-press-event', self._on_search_key)
+        hdr.pack_start(self.search, False, False, 0)
+        root.pack_start(hdr, False, False, 0)
+
+        # List
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_vexpand(True)
+        scroll.set_margin_top(4)
+        scroll.set_margin_bottom(4)
+
+        self.listbox = Gtk.ListBox()
+        self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.listbox.get_style_context().add_class('cv-listbox')
+        self.listbox.set_activate_on_single_click(True)
+        # Mouse click paste
+        self.listbox.connect('row-activated', self._on_row_activated)
+        # Keyboard on listbox: Enter, Delete, Escape, type-to-search
+        self.listbox.connect('key-press-event', self._on_listbox_key)
+        scroll.add(self.listbox)
+        root.pack_start(scroll, True, True, 0)
+
+        # Footer
+        foot = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        foot.get_style_context().add_class('cv-footer')
+        hint = Gtk.Label(label="↑↓ navigate  •  Enter paste  •  Del remove  •  Esc close")
+        hint.get_style_context().add_class('cv-hint')
+        hint.set_halign(Gtk.Align.START)
+        foot.pack_start(hint, True, True, 0)
+        btn = Gtk.Button(label="Clear all")
+        btn.get_style_context().add_class('cv-clear')
+        btn.connect('clicked', lambda _: (self.app.clear_all(),
+                                          self._render(self.app.history)))
+        foot.pack_end(btn, False, False, 0)
+        root.pack_start(foot, False, False, 0)
+
+    # ── Render ────────────────────────────────────────────────────
+    def _render(self, items):
+        for c in self.listbox.get_children():
+            self.listbox.remove(c)
+
+        if not items:
+            row = Gtk.ListBoxRow()
+            row.set_selectable(False)
+            lbl = Gtk.Label(label="Nothing here yet — copy something!")
+            lbl.get_style_context().add_class('cv-empty')
+            lbl.set_margin_top(48); lbl.set_margin_bottom(48)
+            row.add(lbl)
+            self.listbox.add(row)
+        else:
+            icons = {'text': '📄', 'link': '🔗', 'code': '📝', 'image': '🖼'}
+            for item in items:
+                row = Gtk.ListBoxRow()
+                row._clip = item
+
+                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+                box.get_style_context().add_class('cv-item-box')
+
+                ico = Gtk.Label(label=icons.get(item.ctype, '📄'))
+                ico.set_width_chars(2)
+                ico.set_valign(Gtk.Align.CENTER)
+                box.pack_start(ico, False, False, 0)
+
+                vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+                vbox.set_hexpand(True)
+                p_lbl = Gtk.Label(label=item.preview())
+                p_lbl.set_halign(Gtk.Align.START)
+                p_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+                p_lbl.set_max_width_chars(52)
+                p_lbl.get_style_context().add_class('cv-preview')
+                m_lbl = Gtk.Label(label=time_ago(item.ts))
+                m_lbl.set_halign(Gtk.Align.START)
+                m_lbl.get_style_context().add_class('cv-meta')
+                vbox.pack_start(p_lbl, False, False, 0)
+                vbox.pack_start(m_lbl, False, False, 0)
+                box.pack_start(vbox, True, True, 0)
+
+                badge = Gtk.Label(label=item.ctype.upper())
+                badge.get_style_context().add_class('cv-badge')
+                badge.set_valign(Gtk.Align.CENTER)
+                box.pack_end(badge, False, False, 0)
+
+                row.add(box)
+                self.listbox.add(row)
+
+        self.listbox.show_all()
+        self.lbl_count.set_text(f"{len(self.app.history)} items")
+
+        # Select first row
+        rows = self._clip_rows()
+        if rows:
+            self.listbox.select_row(rows[0])
+
+    def _clip_rows(self):
+        return [r for r in self.listbox.get_children()
+                if getattr(r, '_clip', None)]
+
+    # ── Key handlers ──────────────────────────────────────────────
+
+    def _on_listbox_key(self, _widget, ev):
+        """Fires when listbox has focus. Arrow keys are handled by GTK natively."""
+        k = ev.keyval
+        if k in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            self._paste_selected()
+            return True          # consume — stops row-activated from also firing
+        if k == Gdk.KEY_Delete:
+            self._delete_selected()
+            return True
+        if k == Gdk.KEY_Escape:
+            self._dismiss()
+            return True
+        # Printable char while listbox focused → forward to search
+        if ev.string and ev.string.isprintable() and not (
+                ev.get_state() & (Gdk.ModifierType.CONTROL_MASK |
+                                  Gdk.ModifierType.MOD1_MASK)):
+            cur = self.search.get_text()
+            self.search.set_text(cur + ev.string)
+            self.search.set_position(-1)
+            self.search.grab_focus()
+            return True
+        return False   # let GTK handle Up/Down natively
+
+    def _on_search_key(self, _widget, ev):
+        """Fires when search entry has focus."""
+        k = ev.keyval
+        if k == Gdk.KEY_Escape:
+            self._dismiss()
+            return True
+        if k in (Gdk.KEY_Down, Gdk.KEY_Up):
+            # Move selection and give focus back to listbox
+            rows = self._clip_rows()
+            if rows:
+                sel = self.listbox.get_selected_row()
+                idx = rows.index(sel) if sel in rows else -1
+                d   = 1 if k == Gdk.KEY_Down else -1
+                nxt = max(0, min(len(rows) - 1, idx + d))
+                self.listbox.select_row(rows[nxt])
+                self.listbox.grab_focus()
+            return True
+        if k == Gdk.KEY_Delete:
+            self._delete_selected()
+            return True
+        return False
+
+    def _on_search_enter(self, _entry):
+        """Enter pressed inside search entry."""
+        self._paste_selected()
+
+    def _on_row_activated(self, _lb, row):
+        """Mouse click on a row."""
+        if hasattr(row, '_clip'):
+            self._do_paste(row._clip)
+
+    def _on_window_focus_out(self, _w, _ev):
+        if self._ignore_fo:
+            return
+        GLib.timeout_add(150, self._maybe_dismiss)
+
+    def _maybe_dismiss(self):
+        if not self.has_toplevel_focus():
+            self._dismiss()
+        return False
+
+    # ── Actions ───────────────────────────────────────────────────
+    def _paste_selected(self):
+        row = self.listbox.get_selected_row()
+        if row and hasattr(row, '_clip'):
+            self._do_paste(row._clip)
+
+    def _delete_selected(self):
+        row = self.listbox.get_selected_row()
+        if not row or not hasattr(row, '_clip'):
+            return
+        # Remember adjacent row to re-select after deletion
+        rows = self._clip_rows()
+        idx  = rows.index(row)
+        self.app.delete_item(row._clip)
+        self._render(self.app.history)
+        # Re-select nearest row
+        new_rows = self._clip_rows()
+        if new_rows:
+            nxt = min(idx, len(new_rows) - 1)
+            self.listbox.select_row(new_rows[nxt])
+
+    def _do_paste(self, item):
+        if self._pasting:
+            return
+        self._pasting = True
+        self._dismiss()
+        GLib.timeout_add(200, lambda: self._finish_paste(item))
+
+    def _finish_paste(self, item):
+        self.app.paste(item)
+        GLib.timeout_add(300, self._reset_pasting)
+        return False
+
+    def _reset_pasting(self):
+        self._pasting = False
+        return False
+
+    def _dismiss(self):
+        self.hide()
+        # Reset search without triggering a re-render (block signal)
+        self.search.handler_block_by_func(self._on_search_changed)
+        self.search.set_text('')
+        self.search.handler_unblock_by_func(self._on_search_changed)
+
+    def _on_search_changed(self, entry):
+        q = entry.get_text().lower().strip()
+        filtered = (
+            [i for i in self.app.history
+             if q in i.content.lower() or q in i.ctype]
+            if q else list(self.app.history)
+        )
+        self._render(filtered)
+
+    # ── Show ──────────────────────────────────────────────────────
+    def show_popup(self):
+        self._pasting = False
+        self._render(self.app.history)
+        self.show_all()
+        self.present()
+        # Block focus-out briefly so opening the window doesn't immediately close it
+        self._ignore_fo = True
+        GLib.timeout_add(300, self._unblock_fo)
+        # Focus listbox so arrow keys work immediately
+        self.listbox.grab_focus()
+
+    def _unblock_fo(self):
+        self._ignore_fo = False
+        return False
+
+
+# ── Core app ──────────────────────────────────────────────────────────────────
+class ClipVault:
+
+    def __init__(self):
+        self.history     = []
+        self._last_hash  = None
+        self._win        = None
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        self._load()
+        self._cb         = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self._is_wayland = bool(os.environ.get('WAYLAND_DISPLAY'))
+
+        self._start_hotkey_thread()
+        signal.signal(signal.SIGUSR1, lambda *_: GLib.idle_add(self._show))
+        signal.signal(signal.SIGUSR2, lambda *_: GLib.idle_add(self._read_wl_clipboard))
+
+        if self._is_wayland:
+            self._start_wl_watch()
+        else:
+            GLib.timeout_add(500, self._poll_clipboard)
+
+        mode = 'Wayland' if self._is_wayland else 'X11'
+        print(f"ClipVault running (PID {os.getpid()}) [{mode}]")
+        print("Trigger: Win+V  or  pkill -USR1 -f clipvault.py")
+
+    # ── Clipboard — Wayland ───────────────────────────────────────
+    def _start_wl_watch(self):
+        script = os.path.join(CONFIG_DIR, 'notify.sh')
+        with open(script, 'w') as f:
+            f.write('#!/bin/sh\npkill -USR2 -f clipvault.py\n')
+        os.chmod(script, 0o755)
+        def run():
+            while True:
+                try:
+                    subprocess.run(['wl-paste', '--watch', script], check=True)
+                except FileNotFoundError:
+                    print("[wl-paste] not found — run: sudo apt install wl-clipboard")
+                    break
+                except Exception as e:
+                    print(f"[wl-paste] {e} — restarting in 2s")
+                    time.sleep(2)
+        threading.Thread(target=run, daemon=True).start()
+
+    def _read_wl_clipboard(self):
+        # Text
+        try:
+            r = subprocess.run(['wl-paste', '--no-newline'],
+                               capture_output=True, text=True, timeout=3)
+            if r.returncode == 0 and r.stdout.strip():
+                self._ingest_text(r.stdout)
+                return False
+        except Exception as e:
+            print(f"[wl-paste text] {e}")
+        # Image
+        try:
+            r = subprocess.run(['wl-paste', '--type', 'image/png'],
+                               capture_output=True, timeout=3)
+            if r.returncode == 0 and r.stdout:
+                b64 = base64.b64encode(r.stdout).decode()
+                h   = hashlib.md5(b64.encode()).hexdigest()
+                if h != self._last_hash:
+                    self._last_hash = h
+                    self._add('image', b64, h)
+        except Exception as e:
+            print(f"[wl-paste image] {e}")
+        return False
+
+    # ── Clipboard — X11 ───────────────────────────────────────────
+    def _poll_clipboard(self):
+        self._cb.request_text(self._got_text)
+        return True
+
+    def _got_text(self, cb, text):
+        if text and text.strip():
+            self._ingest_text(text)
+        else:
+            cb.request_image(self._got_image)
+
+    def _got_image(self, _cb, pixbuf):
+        if pixbuf is None:
+            return
+        try:
+            ok, buf = pixbuf.save_to_bufferv('png', [], [])
+            if ok:
+                b64 = base64.b64encode(bytes(buf)).decode()
+                h   = hashlib.md5(b64.encode()).hexdigest()
+                if h != self._last_hash:
+                    self._last_hash = h
+                    self._add('image', b64, h)
+        except Exception as e:
+            print(f"[image capture] {e}")
+
+    def _ingest_text(self, text):
+        h = hashlib.md5(text.encode('utf-8', errors='ignore')).hexdigest()
+        if h != self._last_hash:
+            self._last_hash = h
+            self._add(classify(text), text, h)
+            print(f"[clip] {classify(text)}: {text[:60].strip()!r}")
+
+    def _add(self, ctype, content, h):
+        self.history = [i for i in self.history if i.hash != h]
+        item = ClipItem(ctype, content)
+        item.hash = h
+        self.history.insert(0, item)
+        self.history = self.history[:MAX_ITEMS]
+        self._save()
+
+    # ── Paste ─────────────────────────────────────────────────────
+    def paste(self, item):
+        """Set clipboard to item then simulate Ctrl+V."""
+        if item.ctype == 'image':
+            try:
+                loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+                loader.write(base64.b64decode(item.content))
+                loader.close()
+                self._cb.set_image(loader.get_pixbuf())
+                self._cb.store()
+            except Exception as e:
+                print(f"[paste image] {e}")
+                return
+        else:
+            # On Wayland use wl-copy for reliable clipboard ownership
+            if self._is_wayland:
+                try:
+                    subprocess.Popen(['wl-copy', item.content])
+                except Exception:
+                    self._cb.set_text(item.content, -1)
+                    self._cb.store()
+            else:
+                self._cb.set_text(item.content, -1)
+                self._cb.store()
+
+        # Move to top of history
+        self.history = [item] + [i for i in self.history if i.hash != item.hash]
+        self._save()
+
+        # Simulate Ctrl+V after short delay
+        threading.Thread(target=self._keystroke_paste, daemon=True).start()
+        return False
+
+    def _keystroke_paste(self):
+        time.sleep(0.35)
+        if self._is_wayland:
+            for cmd in (
+                ['ydotool', 'key', 'ctrl+v'],
+                ['wtype', '-M', 'ctrl', '-k', 'v'],
+            ):
+                try:
+                    r = subprocess.run(cmd, capture_output=True, timeout=3)
+                    if r.returncode == 0:
+                        return
+                except Exception:
+                    pass
+            print("[paste] Item is in clipboard — press Ctrl+V to paste")
+        else:
+            try:
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'ctrl+v'],
+                               check=True, capture_output=True)
+            except Exception as e:
+                print(f"[paste] {e} — press Ctrl+V manually")
+
+    # ── Hotkey ────────────────────────────────────────────────────
+    def _start_hotkey_thread(self):
+        def run():
+            try:
+                from pynput import keyboard as kb
+                with kb.GlobalHotKeys({'<super>+v': lambda: GLib.idle_add(self._show)}):
+                    while True:
+                        time.sleep(1)
+            except Exception as e:
+                print(f"[hotkey/pynput] {e} — set Win+V shortcut in DE settings")
+        threading.Thread(target=run, daemon=True).start()
+
+    def _show(self):
+        if self._win is None:
+            self._win = ClipWindow(self)
+        self._win.show_popup()
+        return False
+
+    def delete_item(self, item):
+        self.history = [i for i in self.history if i.hash != item.hash]
+        self._save()
+
+    def clear_all(self):
+        self.history.clear()
+        self._last_hash = None
+        self._save()
+
+    # ── Persistence ───────────────────────────────────────────────
+    def _load(self):
+        if not os.path.exists(HISTORY_FILE):
+            return
+        try:
+            with open(HISTORY_FILE) as f:
+                raw = json.load(f)
+            self.history = [ClipItem.from_dict(d) for d in raw]
+            if self.history:
+                self._last_hash = self.history[0].hash
+            print(f"Loaded {len(self.history)} saved items.")
+        except Exception as e:
+            print(f"[load] {e}")
+
+    def _save(self):
+        try:
+            to_save = [i.to_dict() for i in self.history[:MAX_ITEMS]
+                       if not (i.ctype == 'image' and len(i.content) > 2_000_000)]
+            with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(to_save, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[save] {e}")
+
+    def run(self):
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        Gtk.main()
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    lock = os.path.join(CONFIG_DIR, '.lock')
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    try:
+        import fcntl
+        lf = open(lock, 'w')
+        fcntl.lockf(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        print("ClipVault is already running.")
+        sys.exit(0)
+    ClipVault().run()

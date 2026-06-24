@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"   # triggers on v1.0.0, v1.2.3 etc.
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Validate Python syntax
+        run: python3 -m py_compile clipvault.py && echo "✔ syntax OK"
+
+      - name: Validate shell syntax
+        run: bash -n install.sh && echo "✔ shell OK"
+
+      - name: Build release zip
+        run: |
+          mkdir -p dist
+          zip -r dist/clipvault-${{ env.VERSION }}.zip \
+            clipvault.py \
+            install.sh \
+            README.md \
+            LICENSE \
+            CHANGELOG.md \
+            assets/ \
+            packaging/ \
+            --exclude "*/__pycache__/*" \
+            --exclude "*/.git/*"
+
+      - name: Extract changelog for this release
+        id: changelog
+        run: |
+          # Pull the section for this version from CHANGELOG.md
+          NOTES=$(awk "/^## \[${{ env.VERSION }}\]/,/^## \[/" CHANGELOG.md \
+                  | head -n -1 | tail -n +2)
+          echo "NOTES<<EOF" >> $GITHUB_ENV
+          echo "$NOTES"     >> $GITHUB_ENV
+          echo "EOF"        >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "ClipVault v${{ env.VERSION }}"
+          body: |
+            ## ClipVault v${{ env.VERSION }}
+
+            ${{ env.NOTES }}
+
+            ---
+
+            ### Quick install
+
+            ```bash
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/clipvault-${{ env.VERSION }}.zip
+            unzip clipvault-${{ env.VERSION }}.zip -d clipvault
+            cd clipvault
+            chmod +x install.sh && ./install.sh
+            ```
+
+            ### Requirements
+            - Linux (Ubuntu, Fedora, Arch, Pop!_OS, Mint, openSUSE, and more)
+            - Python 3.8+
+            - GTK 3
+          files: dist/clipvault-${{ env.VERSION }}.zip
+          draft: false
+          prerelease: false

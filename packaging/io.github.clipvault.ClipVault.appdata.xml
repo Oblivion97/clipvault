@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.clipvault.ClipVault</id>
+  <name>ClipVault</name>
+  <summary>Windows-style clipboard history manager for Linux</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      ClipVault brings the Windows clipboard history experience to Linux.
+      Press Win+V anywhere to open a searchable popup of everything you have
+      copied — text, links, code snippets, and images — then click or press
+      Enter to paste instantly.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Win+V hotkey opens clipboard history from anywhere</li>
+      <li>Stores up to 200 recent copies persistently across reboots</li>
+      <li>Captures text, links, code snippets and images automatically</li>
+      <li>Full-text search to filter history instantly</li>
+      <li>Keyboard navigation with arrow keys, Enter to paste, Del to remove</li>
+      <li>Works on both Wayland and X11</li>
+      <li>Starts silently at login with zero configuration</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.clipvault.ClipVault.desktop</launchable>
+
+  <url type="homepage">https://github.com/YOUR_USERNAME/clipvault</url>
+  <url type="bugtracker">https://github.com/YOUR_USERNAME/clipvault/issues</url>
+  <url type="vcs-browser">https://github.com/YOUR_USERNAME/clipvault</url>
+
+  <developer id="io.github.clipvault">
+    <name>ClipVault Contributors</name>
+  </developer>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <categories>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>clipboard</keyword>
+    <keyword>copy</keyword>
+    <keyword>paste</keyword>
+    <keyword>history</keyword>
+    <keyword>productivity</keyword>
+  </keywords>
+
+  <releases>
+    <release version="1.0.0" date="2025-06-24">
+      <description>
+        <p>Initial release with full Wayland and X11 support.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+</component>

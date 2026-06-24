@@ -1,0 +1,52 @@
+app-id: io.github.clipvault.ClipVault
+runtime: org.gnome.Platform
+runtime-version: "46"
+sdk: org.gnome.Sdk
+command: clipvault
+
+finish-args:
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # Clipboard access (Wayland)
+  - --socket=wayland
+  # Config and history file
+  - --filesystem=~/.config/clipvault:create
+  # Notifications
+  - --talk-name=org.freedesktop.Notifications
+  # gsettings (keyboard shortcut registration)
+  - --talk-name=ca.desrt.dconf
+  - --filesystem=xdg-run/dconf
+  - --filesystem=~/.config/dconf:ro
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+
+modules:
+  # pynput — global hotkey support on X11
+  - name: python3-pynput
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links=. --prefix=/app pynput evdev
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/py3/p/pynput/pynput-1.7.7-py3-none-any.whl
+        sha256: a75a1b35f60e6e52e5ee88b62a4a2fca91f9cb2a26ca106d8ef78f8abe2eb2de
+
+  # Main app
+  - name: clipvault
+    buildsystem: simple
+    build-commands:
+      # Install main script
+      - install -Dm755 clipvault.py /app/bin/clipvault
+      # Desktop file
+      - install -Dm644 packaging/io.github.clipvault.ClipVault.desktop
+          /app/share/applications/io.github.clipvault.ClipVault.desktop
+      # Icon
+      - install -Dm644 assets/icon.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.clipvault.ClipVault.svg
+      # AppStream metadata
+      - install -Dm644 packaging/io.github.clipvault.ClipVault.appdata.xml
+          /app/share/appdata/io.github.clipvault.ClipVault.appdata.xml
+    sources:
+      - type: dir
+        path: .
