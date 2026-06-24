@@ -30,45 +30,17 @@ Enter to paste — just like Windows 11 clipboard history.
 
 ## Install
 
-### One-line install (recommended)
-
 ```bash
-wget https://github.com/YOUR_USERNAME/clipvault/releases/latest/download/clipvault-latest.zip
-unzip clipvault-latest.zip -d clipvault && cd clipvault
+wget https://github.com/YOUR_USERNAME/clipvault/releases/latest/download/clipvault-1.0.0.zip
+unzip clipvault-1.0.0.zip -d clipvault && cd clipvault
 chmod +x install.sh && ./install.sh
 ```
 
 The installer automatically:
-- Installs all dependencies for your distro (apt / dnf / pacman / zypper)
+- Detects your distro and installs all dependencies (apt / dnf / pacman / zypper)
 - Registers the **Win+V** keyboard shortcut in your DE
 - Sets up autostart on login
 - Starts ClipVault immediately
-
-### From source
-
-```bash
-git clone https://github.com/YOUR_USERNAME/clipvault
-cd clipvault
-chmod +x install.sh && ./install.sh
-```
-
-### Flatpak
-
-```bash
-flatpak install flathub io.github.clipvault.ClipVault
-```
-
-### Snap
-
-```bash
-sudo snap install clipvault --classic
-```
-
-### Arch Linux (AUR)
-
-```bash
-yay -S clipvault
-```
 
 ---
 
@@ -78,7 +50,7 @@ yay -S clipvault
 2. Press **Win+V** anywhere to open history
 3. Use **↑↓** to navigate, **Enter** to paste, **Esc** to close
 4. Or just **click** any item to paste it directly
-5. **Type** while the popup is open to search/filter
+5. **Type** while the popup is open to search and filter
 
 ### Keyboard shortcuts
 
@@ -110,19 +82,25 @@ yay -S clipvault
 
 ## Wayland notes
 
-The installer handles everything automatically, but here is what it does:
+The installer handles everything automatically. Here is what it sets up:
 
-**Clipboard monitoring** uses `wl-clipboard` (installed automatically).
+**Clipboard monitoring** uses `wl-clipboard` — installed automatically.
 
 **Auto-paste** uses `ydotool`. The installer enables its daemon via systemd.
-Without it, the item is still copied to clipboard — press **Ctrl+V** yourself.
+Without it, items are still copied to clipboard — just press **Ctrl+V** yourself.
 
 **Win+V shortcut** is registered automatically for GNOME, KDE, Cinnamon and MATE.
-On other DEs, add it manually: Command `pkill -USR1 -f clipvault.py`, Key `Super+V`.
+On other DEs add manually: Command `pkill -USR1 -f clipvault.py`, Key `Super+V`.
 
 ---
 
 ## Uninstall
+
+```bash
+chmod +x uninstall.sh && ./uninstall.sh
+```
+
+Or manually:
 
 ```bash
 pkill -f clipvault.py 2>/dev/null
@@ -133,6 +111,14 @@ rm -f  ~/.local/share/applications/clipvault.desktop
 
 ---
 
+## Requirements
+
+- Linux
+- Python 3.8+
+- GTK 3 — installed automatically by the installer
+
+---
+
 ## Contributing
 
 PRs are welcome. Please open an issue first for major changes.
@@ -140,21 +126,21 @@ PRs are welcome. Please open an issue first for major changes.
 ```bash
 git clone https://github.com/YOUR_USERNAME/clipvault
 cd clipvault
-python3 clipvault.py   # run directly, no build step needed
+python3 clipvault.py
 ```
 
 Update [CHANGELOG.md](CHANGELOG.md) for any user-facing changes.
 
 ---
 
-## Publishing a new release
+## Publishing a release
 
 ```bash
 git tag v1.1.0
 git push origin v1.1.0
 ```
 
-GitHub Actions builds the zip and creates a GitHub Release automatically.
+GitHub Actions builds the zip and publishes the release automatically.
 
 ---
 
