@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Runtime / user data
+*.lock
+*.log
+*.pid
+
+# User config & history (generated at runtime)
+~/.config/clipvault/
+
+# Packaging output
+*.zip
+*.tar.gz
+*.deb
+*.rpm
+*.AppImage
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
