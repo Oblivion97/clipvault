@@ -1,13 +1,6 @@
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.egg
-*.egg-info/
-dist/
-build/
-.eggs/
 
 # Virtual environments
 .venv/
@@ -15,40 +8,20 @@ venv/
 env/
 .env
 
-# Runtime / user data
+# Runtime files (generated at runtime)
 *.lock
 *.log
 *.pid
 
-# User config & history (generated at runtime)
-~/.config/clipvault/
-
-# Packaging output
-*.zip
-*.tar.gz
-*.deb
-*.rpm
-*.AppImage
+# Release build artifacts
+dist/
+packaging/deb/clipvault_*/
+packaging/rpm/build/
+packaging/zip_staging/
 
 # IDE / editor
 .vscode/
 .idea/
 *.swp
-*.swo
 *~
 .DS_Store
-Thumbs.db
-
-# pytest / coverage
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Release build artifacts
-dist/
-packaging/deb/clipvault_*/
-packaging/zip_staging/
-packaging/snap/parts/
-packaging/snap/stage/
-packaging/snap/prime/
-packaging/snap/*.snap

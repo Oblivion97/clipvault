@@ -40,10 +40,6 @@ hdr "── Step 1: Bumping version to $VERSION"
 sed -i "s/^VERSION *= *'[^']*'/VERSION = '$VERSION'/" "$SCRIPT_DIR/clipvault.py"
 ok "clipvault.py"
 
-# snapcraft.yaml
-sed -i "s/^version: \"[^\"]*\"/version: \"$VERSION\"/" \
-    "$SCRIPT_DIR/packaging/snap/snapcraft.yaml"
-ok "snapcraft.yaml"
 
 # AUR PKGBUILD
 sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$SCRIPT_DIR/packaging/aur/PKGBUILD"
@@ -239,18 +235,8 @@ else
     warn "Skipping .rpm — rpmbuild not available"
 fi
 
-# ── Step 6: Snap ─────────────────────────────────────────────────────────────
-hdr "── Step 6: Snap"
-if command -v snapcraft &>/dev/null; then
-    info "snapcraft found — run manually: cd packaging/snap && snapcraft pack --destructive-mode"
-else
-    warn "snapcraft not found — skipping snap build"
-fi
-cp "$SCRIPT_DIR/packaging/snap/snapcraft.yaml" "$DIST_DIR/snapcraft_${VERSION}.yaml"
-ok "snapcraft.yaml copied to dist"
-
-# ── Step 7: Sync website screenshot ──────────────────────────────────────────
-hdr "── Step 7: Syncing website screenshot"
+# ── Step 6: Sync website screenshot ──────────────────────────────────────────
+hdr "── Step 6: Syncing website screenshot"
 if [[ -f "$SCRIPT_DIR/assets/screenshot.png" ]]; then
     cp "$SCRIPT_DIR/assets/screenshot.png" "$SCRIPT_DIR/docs/screenshot.png"
     ok "docs/screenshot.png synced"
@@ -258,8 +244,8 @@ else
     warn "assets/screenshot.png not found — skipping screenshot sync"
 fi
 
-# ── Step 8: Git tag + GitHub release ─────────────────────────────────────────
-hdr "── Step 8: Git commit, tag and GitHub release"
+# ── Step 7: Git tag + GitHub release ─────────────────────────────────────────
+hdr "── Step 7: Git commit, tag and GitHub release"
 
 cd "$SCRIPT_DIR"
 git add -A
