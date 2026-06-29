@@ -19,6 +19,9 @@ packaging/deb/clipvault_*/
 packaging/rpm/build/
 packaging/zip_staging/
 
+# Claude Code
+.claude/
+
 # IDE / editor
 .vscode/
 .idea/
