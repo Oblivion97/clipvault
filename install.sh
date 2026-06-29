@@ -209,6 +209,7 @@ Categories=Utility;GTK;
 Keywords=clipboard;copy;paste;history;
 StartupNotify=false
 EOF
+update-desktop-database "$APPS_DIR" 2>/dev/null || true
 ok "Desktop entry created"
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
@@ -301,6 +302,11 @@ elif [[ "$DE" == *"Cinnamon"* ]]; then
     if command -v gsettings &>/dev/null; then
         register_gnome_shortcut   # Cinnamon is GNOME-derived
     fi
+elif [[ "$DE" == *"COSMIC"* ]]; then
+    warn "COSMIC DE detected — pynput handles Win+V internally."
+    warn "If Win+V conflicts, change it in: ClipVault → Settings → Keyboard shortcut"
+    warn "Or add via COSMIC Settings → Keyboard → Custom Shortcuts:"
+    warn "  Command: $SHORTCUT_CMD   Key: Super+V"
 elif command -v gsettings &>/dev/null; then
     # Unknown DE but gsettings exists — try anyway
     register_gnome_shortcut
