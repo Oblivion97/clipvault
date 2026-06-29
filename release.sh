@@ -46,8 +46,12 @@ sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$SCRIPT_DIR/packaging/aur/PKGBUILD"
 sed -i "s/YOUR_USERNAME/Oblivion97/g" "$SCRIPT_DIR/packaging/aur/PKGBUILD"
 ok "PKGBUILD"
 
-# README install URL
-sed -i "s/clipvault-[0-9]*\.[0-9]*\.[0-9]*\.zip/clipvault-${VERSION}.zip/g" \
+# README — update all version references (.deb, .rpm, .zip, cd path)
+sed -i \
+    -e "s/clipvault_[0-9]*\.[0-9]*\.[0-9]*_all\.deb/clipvault_${VERSION}_all.deb/g" \
+    -e "s/clipvault-[0-9]*\.[0-9]*\.[0-9]*\.noarch\.rpm/clipvault-${VERSION}.noarch.rpm/g" \
+    -e "s/clipvault-[0-9]*\.[0-9]*\.[0-9]*\.zip/clipvault-${VERSION}.zip/g" \
+    -e "s/cd clipvault-[0-9]*\.[0-9]*\.[0-9]*/cd clipvault-${VERSION}/g" \
     "$SCRIPT_DIR/README.md"
 ok "README.md"
 
