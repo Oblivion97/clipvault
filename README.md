@@ -59,8 +59,8 @@ sudo zypper install clipvault-1.2.0.noarch.rpm
 ### Arch / Manjaro / Any distro — Universal installer
 
 ```bash
-wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.2.0.zip
-unzip clipvault-1.2.0.zip && cd clipvault-1.2.0
+wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.6.0.zip
+unzip clipvault-1.6.0.zip && cd clipvault-1.2.0
 chmod +x install.sh && ./install.sh
 ```
 
