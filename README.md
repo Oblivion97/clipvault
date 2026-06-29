@@ -11,6 +11,10 @@ ClipVault runs silently in the background and remembers everything you copy.
 Press **Win+V** to open a searchable popup, navigate with arrow keys, and press
 Enter to paste — just like Windows 11 clipboard history.
 
+🌐 **[clipvault website](https://oblivion97.github.io/clipvault)**
+
+![ClipVault screenshot](assets/screenshot.png)
+
 ---
 
 ## Features
