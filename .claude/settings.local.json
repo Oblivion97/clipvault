@@ -1,7 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wl-paste *)"
+      "Bash(wl-paste *)",
+      "Bash(python3 clipvault.py)",
+      "Bash(pkill -f clipvault.py)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(python3 *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(pkill -9 -f clipvault.py)",
+      "Bash(pkill -USR1 -f clipvault.py)",
+      "Bash(kill %1)",
+      "Bash(python3 /home/mahmudul/Documents/Development/Exp/clipvault/clipvault.py)",
+      "Read(//tmp/**)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(DISPLAY=:0 python3 /home/mahmudul/Documents/Development/Exp/clipvault/clipvault.py)",
+      "Bash(echo \"signal sent: $?\")",
+      "Bash(echo \"Signal sent: $?\")"
     ]
   }
 }

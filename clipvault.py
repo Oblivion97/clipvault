@@ -13,9 +13,50 @@ import os, sys, json, hashlib, base64, threading, time, subprocess, signal, re
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
-MAX_ITEMS    = 200
-CONFIG_DIR   = os.path.expanduser('~/.config/clipvault')
-HISTORY_FILE = os.path.join(CONFIG_DIR, 'history.json')
+CONFIG_DIR    = os.path.expanduser('~/.config/clipvault')
+HISTORY_FILE  = os.path.join(CONFIG_DIR, 'history.json')
+SETTINGS_FILE = os.path.join(CONFIG_DIR, 'settings.json')
+
+DEFAULTS = {
+    'max_items':         200,
+    'paste_delay_ms':    120,
+    'deduplicate':       True,
+    'ignore_passwords':  True,
+    'store_images':      True,
+    'clear_on_exit':     False,
+    'pause_monitoring':  False,
+    'autostart':         True,
+    'show_image_thumbs': True,
+    'max_preview_chars': 70,
+    'image_thumb_w':     56,
+    'image_thumb_h':     40,
+}
+
+class Settings:
+    def __init__(self):
+        self._data = dict(DEFAULTS)
+        self._load()
+
+    def _load(self):
+        try:
+            with open(SETTINGS_FILE) as f:
+                self._data.update(json.load(f))
+        except Exception:
+            pass
+
+    def save(self):
+        try:
+            with open(SETTINGS_FILE, 'w') as f:
+                json.dump(self._data, f, indent=2)
+        except Exception as e:
+            print(f"[settings] {e}")
+
+    def get(self, key):
+        return self._data.get(key, DEFAULTS.get(key))
+
+    def set(self, key, value):
+        self._data[key] = value
+        self.save()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def classify(text):
@@ -191,6 +232,85 @@ button.cv-clear:hover {
 .cv-thumb {
     border: 1px solid #e0e0e0;
 }
+button.cv-settings-btn {
+    background-color: transparent;
+    border: none;
+    color: #cccccc;
+    font-size: 14px;
+    padding: 0 2px;
+    min-width: 0;
+    min-height: 0;
+}
+button.cv-settings-btn:hover {
+    color: #555555;
+    background-color: transparent;
+}
+window.cv-settings {
+    background-color: #ffffff;
+}
+.cv-settings-header {
+    background-color: #ffffff;
+    padding: 16px 20px 12px 20px;
+    border-bottom: 1px solid #e8e8e8;
+}
+.cv-settings-title {
+    color: #0d0d0d;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.cv-section-label {
+    color: #aaaaaa;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+.cv-setting-row {
+    padding: 10px 20px;
+    border-bottom: 1px solid #f4f4f4;
+}
+.cv-setting-name {
+    color: #1a1a1a;
+    font-size: 13px;
+    font-weight: 500;
+}
+.cv-setting-desc {
+    color: #aaaaaa;
+    font-size: 11px;
+    margin-top: 1px;
+}
+.cv-settings-footer {
+    background-color: #ffffff;
+    padding: 10px 20px;
+    border-top: 1px solid #e8e8e8;
+}
+button.cv-save-btn {
+    background-color: #0d0d0d;
+    border: none;
+    border-radius: 0;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: 6px 20px;
+}
+button.cv-save-btn:hover {
+    background-color: #333333;
+}
+.cv-author-link {
+    color: #0a66c2;
+    font-size: 11px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+.cv-author-link:hover {
+    color: #004182;
+    background: transparent;
+}
 """
 
 # ── Window ────────────────────────────────────────────────────────────────────
@@ -201,6 +321,7 @@ class ClipWindow(Gtk.Window):
         self.app             = app
         self._pasting        = False   # guard: prevent double-paste
         self._ignore_fo      = False   # ignore focus-out briefly on open
+        self._settings_open  = False
 
         self.set_title("ClipVault")
         self.set_default_size(480, 580)
@@ -241,6 +362,10 @@ class ClipWindow(Gtk.Window):
         self.lbl_count = Gtk.Label()
         self.lbl_count.get_style_context().add_class('cv-count')
         title_row.pack_end(self.lbl_count, False, False, 0)
+        gear = Gtk.Button(label="⚙")
+        gear.get_style_context().add_class('cv-settings-btn')
+        gear.connect('clicked', self._open_settings)
+        title_row.pack_end(gear, False, False, 4)
         hdr.pack_start(title_row, False, False, 0)
 
         self.search = Gtk.SearchEntry()
@@ -444,9 +569,20 @@ class ClipWindow(Gtk.Window):
         GLib.timeout_add(150, self._maybe_dismiss)
 
     def _maybe_dismiss(self):
-        if not self.has_toplevel_focus():
+        if not self.has_toplevel_focus() and not self._settings_open:
             self._dismiss()
         return False
+
+    def _open_settings(self, _btn=None):
+        self._settings_open = True
+        self._ignore_fo = True
+        win = SettingsWindow(self.app)
+        win.connect('destroy', self._on_settings_closed)
+        win.show_all()
+
+    def _on_settings_closed(self, _win):
+        self._settings_open = False
+        self._ignore_fo = False
 
     # ── Actions ───────────────────────────────────────────────────
     def _paste_selected(self):
@@ -518,6 +654,152 @@ class ClipWindow(Gtk.Window):
         return False
 
 
+# ── Settings Window ───────────────────────────────────────────────────────────
+class SettingsWindow(Gtk.Window):
+
+    def __init__(self, app):
+        super().__init__(title="ClipVault Settings")
+        self.app = app
+        self.s   = app.settings
+        self._widgets = {}
+
+        self.set_default_size(440, 560)
+        self.set_resizable(False)
+        self.set_decorated(True)
+        self.set_keep_above(True)
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        self.get_style_context().add_class('cv-settings')
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.add(root)
+
+        # Header
+        hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        hdr.get_style_context().add_class('cv-settings-header')
+        t = Gtk.Label(label="SETTINGS")
+        t.get_style_context().add_class('cv-settings-title')
+        t.set_halign(Gtk.Align.START)
+        hdr.pack_start(t, True, True, 0)
+        root.pack_start(hdr, False, False, 0)
+
+        # Scrollable body
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_vexpand(True)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        scroll.add(body)
+        root.pack_start(scroll, True, True, 0)
+
+        def section(label):
+            lbl = Gtk.Label(label=label)
+            lbl.get_style_context().add_class('cv-section-label')
+            lbl.set_halign(Gtk.Align.START)
+            lbl.set_margin_start(20)
+            lbl.set_margin_top(14)
+            lbl.set_margin_bottom(2)
+            body.pack_start(lbl, False, False, 0)
+
+        def toggle_row(key, name, desc):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row.get_style_context().add_class('cv-setting-row')
+            info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+            info.set_hexpand(True)
+            n = Gtk.Label(label=name)
+            n.get_style_context().add_class('cv-setting-name')
+            n.set_halign(Gtk.Align.START)
+            d = Gtk.Label(label=desc)
+            d.get_style_context().add_class('cv-setting-desc')
+            d.set_halign(Gtk.Align.START)
+            info.pack_start(n, False, False, 0)
+            info.pack_start(d, False, False, 0)
+            sw = Gtk.Switch()
+            sw.set_active(self.s.get(key))
+            sw.set_valign(Gtk.Align.CENTER)
+            row.pack_start(info, True, True, 0)
+            row.pack_end(sw, False, False, 0)
+            body.pack_start(row, False, False, 0)
+            self._widgets[key] = sw
+
+        def spin_row(key, name, desc, min_val, max_val, step=1):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row.get_style_context().add_class('cv-setting-row')
+            info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+            info.set_hexpand(True)
+            n = Gtk.Label(label=name)
+            n.get_style_context().add_class('cv-setting-name')
+            n.set_halign(Gtk.Align.START)
+            d = Gtk.Label(label=desc)
+            d.get_style_context().add_class('cv-setting-desc')
+            d.set_halign(Gtk.Align.START)
+            info.pack_start(n, False, False, 0)
+            info.pack_start(d, False, False, 0)
+            adj = Gtk.Adjustment(value=self.s.get(key),
+                                 lower=min_val, upper=max_val,
+                                 step_increment=step)
+            sb = Gtk.SpinButton(adjustment=adj, climb_rate=1, digits=0)
+            sb.set_valign(Gtk.Align.CENTER)
+            sb.set_width_chars(5)
+            row.pack_start(info, True, True, 0)
+            row.pack_end(sb, False, False, 0)
+            body.pack_start(row, False, False, 0)
+            self._widgets[key] = sb
+
+        # ── General
+        section("GENERAL")
+        spin_row('max_items',         "History limit",       "Maximum number of items to keep",              10, 1000, 10)
+        toggle_row('deduplicate',     "Remove duplicates",   "Keep only the most recent copy of each item")
+        toggle_row('autostart',       "Start on login",      "Launch ClipVault automatically at startup")
+        toggle_row('clear_on_exit',   "Clear on exit",       "Wipe history when the app closes")
+
+        # ── Clipboard
+        section("CLIPBOARD")
+        toggle_row('store_images',    "Capture images",      "Record images copied to clipboard")
+        toggle_row('ignore_passwords',"Ignore passwords",    "Skip clipboard content from password managers")
+        toggle_row('pause_monitoring',"Pause monitoring",    "Stop recording new clipboard items")
+
+        # ── Display
+        section("DISPLAY")
+        toggle_row('show_image_thumbs', "Image thumbnails",  "Show preview thumbnails for image items")
+        spin_row('max_preview_chars', "Preview length",      "Max characters shown in item preview",          20, 200, 10)
+
+        # ── Performance
+        section("PERFORMANCE")
+        spin_row('paste_delay_ms',    "Paste delay (ms)",    "Delay before simulating Ctrl+V after paste",    50, 500, 10)
+
+        # About section
+        section("ABOUT")
+        about_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        about_row.get_style_context().add_class('cv-setting-row')
+        made_lbl = Gtk.Label(label="Made by ")
+        made_lbl.get_style_context().add_class('cv-setting-desc')
+        link = Gtk.LinkButton.new_with_label(
+            "https://www.linkedin.com/in/hmmahmudulhasan/",
+            "H M Mahmudul Hasan")
+        link.get_style_context().add_class('cv-author-link')
+        link.set_halign(Gtk.Align.START)
+        about_row.pack_start(made_lbl, False, False, 0)
+        about_row.pack_start(link, False, False, 0)
+        body.pack_start(about_row, False, False, 0)
+
+        # Footer
+        foot = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        foot.get_style_context().add_class('cv-settings-footer')
+        save_btn = Gtk.Button(label="SAVE")
+        save_btn.get_style_context().add_class('cv-save-btn')
+        save_btn.connect('clicked', self._on_save)
+        foot.pack_end(save_btn, False, False, 0)
+        root.pack_start(foot, False, False, 0)
+
+    def _on_save(self, _btn):
+        for key, widget in self._widgets.items():
+            if isinstance(widget, Gtk.Switch):
+                self.s.set(key, widget.get_active())
+            elif isinstance(widget, Gtk.SpinButton):
+                self.s.set(key, int(widget.get_value()))
+        self.app._apply_settings()
+        self.destroy()
+
+
 # ── Core app ──────────────────────────────────────────────────────────────────
 class ClipVault:
 
@@ -526,6 +808,7 @@ class ClipVault:
         self._last_hash  = None
         self._win        = None
         os.makedirs(CONFIG_DIR, exist_ok=True)
+        self.settings    = Settings()
         self._load()
         self._cb         = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         self._is_wayland = bool(os.environ.get('WAYLAND_DISPLAY'))
@@ -542,6 +825,10 @@ class ClipVault:
         mode = 'Wayland' if self._is_wayland else 'X11'
         print(f"ClipVault running (PID {os.getpid()}) [{mode}]")
         print("Trigger: Win+V  or  pkill -USR1 -f clipvault.py")
+
+    def _apply_settings(self):
+        if self._win:
+            self._win._render(self.history)
 
     # ── Clipboard — Wayland ───────────────────────────────────────
     def _start_wl_watch(self):
@@ -621,8 +908,10 @@ class ClipVault:
             print(f"[image capture] {e}")
 
     def _ingest_text(self, text):
+        if self.settings.get('pause_monitoring'):
+            return
         path = text.strip()
-        if self._try_ingest_image_file(path):
+        if self.settings.get('store_images') and self._try_ingest_image_file(path):
             return
         h = hashlib.md5(text.encode('utf-8', errors='ignore')).hexdigest()
         if h != self._last_hash:
@@ -656,7 +945,7 @@ class ClipVault:
         item = ClipItem(ctype, content)
         item.hash = h
         self.history.insert(0, item)
-        self.history = self.history[:MAX_ITEMS]
+        self.history = self.history[:self.settings.get('max_items')]
         self._save()
 
     # ── Paste ─────────────────────────────────────────────────────
@@ -693,7 +982,7 @@ class ClipVault:
         return False
 
     def _keystroke_paste(self):
-        time.sleep(0.12)
+        time.sleep(self.settings.get('paste_delay_ms') / 1000)
         if self._is_wayland:
             for cmd in (
                 ['ydotool', 'key', 'ctrl+v'],
@@ -756,7 +1045,8 @@ class ClipVault:
 
     def _save(self):
         try:
-            to_save = [i.to_dict() for i in self.history[:MAX_ITEMS]
+            limit = self.settings.get('max_items')
+            to_save = [i.to_dict() for i in self.history[:limit]
                        if not (i.ctype == 'image' and len(i.content) > 2_000_000)]
             with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
                 json.dump(to_save, f, ensure_ascii=False, indent=2)
