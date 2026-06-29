@@ -40,27 +40,27 @@ Enter to paste — just like Windows 11 clipboard history.
 ### Debian / Ubuntu / Mint / Pop!_OS / Zorin / elementary OS
 
 ```bash
-sudo dpkg -i clipvault_1.2.0_all.deb
+sudo dpkg -i clipvault_1.7.0_all.deb
 sudo apt-get install -f
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install clipvault-1.2.0.noarch.rpm
+sudo dnf install clipvault-1.7.0.noarch.rpm
 ```
 
 ### openSUSE
 
 ```bash
-sudo zypper install clipvault-1.2.0.noarch.rpm
+sudo zypper install clipvault-1.7.0.noarch.rpm
 ```
 
 ### Arch / Manjaro / Any distro — Universal installer
 
 ```bash
-wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.6.0.zip
-unzip clipvault-1.6.0.zip && cd clipvault-1.2.0
+wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.7.0.zip
+unzip clipvault-1.7.0.zip && cd clipvault-1.7.0
 chmod +x install.sh && ./install.sh
 ```
 
