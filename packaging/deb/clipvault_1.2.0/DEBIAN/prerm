@@ -1,3 +1,0 @@
-#!/bin/bash
-set -e
-pkill -f clipvault.py 2>/dev/null || true

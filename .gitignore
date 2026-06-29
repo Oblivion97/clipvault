@@ -43,3 +43,12 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Release build artifacts
+dist/
+packaging/deb/clipvault_*/
+packaging/zip_staging/
+packaging/snap/parts/
+packaging/snap/stage/
+packaging/snap/prime/
+packaging/snap/*.snap
