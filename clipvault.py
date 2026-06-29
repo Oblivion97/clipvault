@@ -1202,20 +1202,25 @@ class ClipVault:
 
     # ── Hotkey ────────────────────────────────────────────────────
     def _start_hotkey_thread(self):
-        self._hotkey_stop = threading.Event()
+        self._hotkey_listener = None
         def run():
             try:
                 from pynput import keyboard as kb
                 hotkey = self.settings.get('hotkey') or '<super>+v'
-                with kb.GlobalHotKeys({hotkey: lambda: GLib.idle_add(self._show)}):
-                    self._hotkey_stop.wait()
+                listener = kb.GlobalHotKeys({hotkey: lambda: GLib.idle_add(self._show)})
+                self._hotkey_listener = listener
+                listener.start()
+                listener.join()
             except Exception as e:
                 print(f"[hotkey/pynput] {e} — set shortcut manually in DE settings")
-        self._hotkey_thread = threading.Thread(target=run, daemon=True)
-        self._hotkey_thread.start()
+        threading.Thread(target=run, daemon=True).start()
 
     def _restart_hotkey(self):
-        self._hotkey_stop.set()
+        if self._hotkey_listener is not None:
+            try:
+                self._hotkey_listener.stop()
+            except Exception:
+                pass
         time.sleep(0.1)
         self._start_hotkey_thread()
 
