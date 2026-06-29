@@ -37,6 +37,7 @@ DEFAULTS = {
     'max_preview_chars': 70,
     'image_thumb_w':     56,
     'image_thumb_h':     40,
+    'hotkey':            '<super>+v',
 }
 
 class Settings:
@@ -773,8 +774,75 @@ class SettingsWindow(Gtk.Window):
             body.pack_start(row, False, False, 0)
             self._widgets[key] = sb
 
+        def shortcut_row(key, name, desc):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row.get_style_context().add_class('cv-setting-row')
+            info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+            info.set_hexpand(True)
+            n = Gtk.Label(label=name)
+            n.get_style_context().add_class('cv-setting-name')
+            n.set_halign(Gtk.Align.START)
+            d = Gtk.Label(label=desc)
+            d.get_style_context().add_class('cv-setting-desc')
+            d.set_halign(Gtk.Align.START)
+            info.pack_start(n, False, False, 0)
+            info.pack_start(d, False, False, 0)
+
+            entry = Gtk.Entry()
+            entry.set_text(self.s.get(key) or '<super>+v')
+            entry.set_width_chars(18)
+            entry.set_valign(Gtk.Align.CENTER)
+            entry.get_style_context().add_class('cv-search')
+
+            rec_btn = Gtk.Button(label="Record")
+            rec_btn.set_valign(Gtk.Align.CENTER)
+            rec_btn.get_style_context().add_class('cv-clear')
+
+            recording = [False]
+            pressed   = [set()]
+
+            def _key_press(widget, event):
+                if not recording[0]:
+                    return False
+                keyname = Gdk.keyval_name(event.keyval)
+                mods = []
+                state = event.state
+                if state & Gdk.ModifierType.SUPER_MASK:   mods.append('<super>')
+                if state & Gdk.ModifierType.CONTROL_MASK: mods.append('<ctrl>')
+                if state & Gdk.ModifierType.MOD1_MASK:    mods.append('<alt>')
+                if state & Gdk.ModifierType.SHIFT_MASK:   mods.append('<shift>')
+                ignore = {'Super_L','Super_R','Control_L','Control_R',
+                          'Alt_L','Alt_R','Shift_L','Shift_R','ISO_Level3_Shift'}
+                if keyname not in ignore and mods:
+                    combo = '+'.join(mods) + '+' + keyname.lower()
+                    entry.set_text(combo)
+                    recording[0] = False
+                    rec_btn.set_label("Record")
+                return True
+
+            def _toggle_record(_btn):
+                recording[0] = not recording[0]
+                if recording[0]:
+                    rec_btn.set_label("Press keys…")
+                    entry.grab_focus()
+                else:
+                    rec_btn.set_label("Record")
+
+            entry.connect('key-press-event', _key_press)
+            rec_btn.connect('clicked', _toggle_record)
+
+            ctrl = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            ctrl.pack_start(entry, False, False, 0)
+            ctrl.pack_start(rec_btn, False, False, 0)
+
+            row.pack_start(info, True, True, 0)
+            row.pack_end(ctrl, False, False, 0)
+            body.pack_start(row, False, False, 0)
+            self._widgets[key] = entry
+
         # ── General
         section("GENERAL")
+        shortcut_row('hotkey',        "Keyboard shortcut",   "Click Record then press your key combination")
         spin_row('max_items',         "History limit",       "Maximum number of items to keep",              10, 1000, 10)
         toggle_row('deduplicate',     "Remove duplicates",   "Keep only the most recent copy of each item")
         toggle_row('autostart',       "Start on login",      "Launch ClipVault automatically at startup")
@@ -857,6 +925,8 @@ class SettingsWindow(Gtk.Window):
                 self.s.set(key, widget.get_active())
             elif isinstance(widget, Gtk.SpinButton):
                 self.s.set(key, int(widget.get_value()))
+            elif isinstance(widget, Gtk.Entry):
+                self.s.set(key, widget.get_text().strip())
         self.app._apply_settings()
         self.destroy()
 
@@ -956,6 +1026,7 @@ class ClipVault:
     def _apply_settings(self):
         if self._win:
             self._win._render(self.history)
+        self._restart_hotkey()
 
     # ── Clipboard — Wayland ───────────────────────────────────────
     def _start_wl_watch(self):
@@ -1131,15 +1202,22 @@ class ClipVault:
 
     # ── Hotkey ────────────────────────────────────────────────────
     def _start_hotkey_thread(self):
+        self._hotkey_stop = threading.Event()
         def run():
             try:
                 from pynput import keyboard as kb
-                with kb.GlobalHotKeys({'<super>+v': lambda: GLib.idle_add(self._show)}):
-                    while True:
-                        time.sleep(1)
+                hotkey = self.settings.get('hotkey') or '<super>+v'
+                with kb.GlobalHotKeys({hotkey: lambda: GLib.idle_add(self._show)}):
+                    self._hotkey_stop.wait()
             except Exception as e:
-                print(f"[hotkey/pynput] {e} — set Win+V shortcut in DE settings")
-        threading.Thread(target=run, daemon=True).start()
+                print(f"[hotkey/pynput] {e} — set shortcut manually in DE settings")
+        self._hotkey_thread = threading.Thread(target=run, daemon=True)
+        self._hotkey_thread.start()
+
+    def _restart_hotkey(self):
+        self._hotkey_stop.set()
+        time.sleep(0.1)
+        self._start_hotkey_thread()
 
     def _show(self):
         if self._win is None:
@@ -1194,6 +1272,7 @@ if __name__ == '__main__':
         lf = open(lock, 'w')
         fcntl.lockf(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError:
-        print("ClipVault is already running.")
+        # Already running — show the window via SIGUSR1
+        subprocess.run(['pkill', '-USR1', '-f', 'clipvault.py'])
         sys.exit(0)
     ClipVault().run()
