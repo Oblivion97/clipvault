@@ -26,7 +26,13 @@
       "Bash(chmod 644 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/etc/xdg/autostart/clipvault.desktop)",
       "Bash(echo \"Exit: $?\")",
       "Bash(chmod +x /home/mahmudul/Documents/Development/Exp/clipvault/release.sh)",
-      "Bash(./release.sh 1.2.0)"
+      "Bash(./release.sh 1.2.0)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(clipvault --help)",
+      "Bash(dpkg -l clipvault)"
     ]
   }
 }
