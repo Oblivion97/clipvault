@@ -62,96 +62,134 @@ class ClipItem:
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 CSS = b"""
+* {
+    -gtk-icon-style: regular;
+}
 window.cv-win {
-    background-color: #1a1a1a;
-    border: 2px solid #444;
+    background-color: #ffffff;
+    border: 1px solid #d0d0d0;
 }
 .cv-header {
-    background-color: #000000;
-    padding: 12px 14px 10px 14px;
-    border-bottom: 2px solid #444;
+    background-color: #ffffff;
+    padding: 16px 16px 12px 16px;
+    border-bottom: 1px solid #e8e8e8;
 }
 .cv-title {
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: bold;
+    color: #0d0d0d;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
 }
 .cv-count {
-    color: #aaa;
+    color: #aaaaaa;
     font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 .cv-search {
-    background-color: #2a2a2a;
-    border: 1px solid #555;
-    color: #ffffff;
-    padding: 6px 10px;
+    background-color: #f7f7f7;
+    border: 1px solid #e0e0e0;
+    border-radius: 0;
+    color: #0d0d0d;
+    padding: 8px 12px;
     font-size: 13px;
+    caret-color: #000000;
 }
 .cv-search:focus {
-    border-color: #ffffff;
+    border-color: #aaaaaa;
+    background-color: #ffffff;
 }
 .cv-listbox {
-    background-color: #1a1a1a;
+    background-color: #ffffff;
 }
 .cv-listbox row {
-    background-color: #1a1a1a;
-    border-bottom: 1px solid #2e2e2e;
+    background-color: #ffffff;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 80ms ease;
 }
 .cv-listbox row:hover {
-    background-color: #2a2a2a;
+    background-color: #f9f9f9;
 }
 .cv-listbox row:selected,
 .cv-listbox row:selected:focus {
-    background-color: #ffffff;
+    background-color: #f5f5f5;
+    border-left: 3px solid #0d0d0d;
 }
 .cv-listbox row:selected .cv-preview,
 .cv-listbox row:selected:focus .cv-preview {
-    color: #000000;
+    color: #0d0d0d;
+    font-weight: 600;
 }
 .cv-listbox row:selected .cv-meta,
-.cv-listbox row:selected:focus .cv-meta,
+.cv-listbox row:selected:focus .cv-meta {
+    color: #888888;
+}
 .cv-listbox row:selected .cv-badge,
 .cv-listbox row:selected:focus .cv-badge {
+    color: #666666;
+    border-color: #cccccc;
+}
+.cv-listbox row:selected .cv-icon,
+.cv-listbox row:selected:focus .cv-icon {
     color: #555555;
 }
 .cv-item-box {
-    padding: 10px 12px;
+    padding: 11px 14px;
+}
+.cv-icon {
+    color: #cccccc;
+    font-size: 14px;
 }
 .cv-preview {
-    color: #ffffff;
+    color: #1a1a1a;
     font-size: 13px;
+    font-weight: 400;
 }
 .cv-meta {
-    color: #888;
+    color: #aaaaaa;
     font-size: 11px;
+    margin-top: 1px;
 }
 .cv-badge {
-    color: #666;
-    font-size: 10px;
+    color: #bbbbbb;
+    font-size: 9px;
     font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid #e0e0e0;
+    padding: 1px 5px;
 }
 .cv-footer {
-    background-color: #000000;
-    padding: 8px 12px;
-    border-top: 2px solid #444;
+    background-color: #ffffff;
+    padding: 8px 14px;
+    border-top: 1px solid #e8e8e8;
 }
 .cv-hint {
-    color: #555;
+    color: #cccccc;
     font-size: 11px;
+    letter-spacing: 0.3px;
 }
 .cv-empty {
-    color: #555;
+    color: #cccccc;
     font-size: 13px;
 }
 button.cv-clear {
-    background-color: #1a1a1a;
-    border: 1px solid #883333;
-    color: #ff6666;
-    font-size: 11px;
-    padding: 2px 10px;
+    background-color: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 0;
+    color: #aaaaaa;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: 3px 10px;
 }
 button.cv-clear:hover {
-    background-color: #331111;
+    border-color: #cc3333;
+    color: #cc3333;
+    background-color: transparent;
+}
+.cv-thumb {
+    border: 1px solid #e0e0e0;
 }
 """
 
@@ -165,7 +203,7 @@ class ClipWindow(Gtk.Window):
         self._ignore_fo      = False   # ignore focus-out briefly on open
 
         self.set_title("ClipVault")
-        self.set_default_size(460, 560)
+        self.set_default_size(480, 580)
         self.set_resizable(False)
         self.set_decorated(True)
         self.set_keep_above(True)
@@ -196,7 +234,7 @@ class ClipWindow(Gtk.Window):
         hdr.get_style_context().add_class('cv-header')
 
         title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        lbl = Gtk.Label(label="📋  Clipboard History")
+        lbl = Gtk.Label(label="CLIPBOARD HISTORY")
         lbl.get_style_context().add_class('cv-title')
         lbl.set_halign(Gtk.Align.START)
         title_row.pack_start(lbl, True, True, 0)
@@ -238,11 +276,11 @@ class ClipWindow(Gtk.Window):
         # Footer
         foot = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         foot.get_style_context().add_class('cv-footer')
-        hint = Gtk.Label(label="↑↓ navigate  •  Enter paste  •  Del remove  •  Esc close")
+        hint = Gtk.Label(label="↑ ↓  NAVIGATE    ↵  PASTE    DEL  REMOVE    ESC  CLOSE")
         hint.get_style_context().add_class('cv-hint')
         hint.set_halign(Gtk.Align.START)
         foot.pack_start(hint, True, True, 0)
-        btn = Gtk.Button(label="Clear all")
+        btn = Gtk.Button(label="CLEAR ALL")
         btn.get_style_context().add_class('cv-clear')
         btn.connect('clicked', lambda _: (self.app.clear_all(),
                                           self._render(self.app.history)))
@@ -263,18 +301,33 @@ class ClipWindow(Gtk.Window):
             row.add(lbl)
             self.listbox.add(row)
         else:
-            icons = {'text': '📄', 'link': '🔗', 'code': '📝', 'image': '🖼'}
+            icons = {'text': '¶', 'link': '⌁', 'code': '⌥', 'image': '▣'}
             for item in items:
                 row = Gtk.ListBoxRow()
                 row._clip = item
 
-                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+                box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 box.get_style_context().add_class('cv-item-box')
 
-                ico = Gtk.Label(label=icons.get(item.ctype, '📄'))
-                ico.set_width_chars(2)
-                ico.set_valign(Gtk.Align.CENTER)
-                box.pack_start(ico, False, False, 0)
+                if item.ctype == 'image':
+                    thumb = self._make_thumbnail(item.content, width=56, height=40)
+                    if thumb:
+                        img_widget = Gtk.Image.new_from_pixbuf(thumb)
+                        img_widget.set_valign(Gtk.Align.CENTER)
+                        img_widget.get_style_context().add_class('cv-thumb')
+                        box.pack_start(img_widget, False, False, 0)
+                    else:
+                        ico = Gtk.Label(label='▣')
+                        ico.set_width_chars(2)
+                        ico.set_valign(Gtk.Align.CENTER)
+                        ico.get_style_context().add_class('cv-icon')
+                        box.pack_start(ico, False, False, 0)
+                else:
+                    ico = Gtk.Label(label=icons.get(item.ctype, '¶'))
+                    ico.set_width_chars(2)
+                    ico.set_valign(Gtk.Align.CENTER)
+                    ico.get_style_context().add_class('cv-icon')
+                    box.pack_start(ico, False, False, 0)
 
                 vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 vbox.set_hexpand(True)
@@ -305,6 +358,21 @@ class ClipWindow(Gtk.Window):
         rows = self._clip_rows()
         if rows:
             self.listbox.select_row(rows[0])
+
+    def _make_thumbnail(self, b64_content, width=56, height=40):
+        try:
+            data = base64.b64decode(b64_content)
+            loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+            loader.write(data)
+            loader.close()
+            pb = loader.get_pixbuf()
+            src_w, src_h = pb.get_width(), pb.get_height()
+            scale = min(width / src_w, height / src_h)
+            tw = max(1, int(src_w * scale))
+            th = max(1, int(src_h * scale))
+            return pb.scale_simple(tw, th, GdkPixbuf.InterpType.BILINEAR)
+        except Exception:
+            return None
 
     def _clip_rows(self):
         return [r for r in self.listbox.get_children()
@@ -406,11 +474,11 @@ class ClipWindow(Gtk.Window):
             return
         self._pasting = True
         self._dismiss()
-        GLib.timeout_add(200, lambda: self._finish_paste(item))
+        GLib.timeout_add(80, lambda: self._finish_paste(item))
 
     def _finish_paste(self, item):
         self.app.paste(item)
-        GLib.timeout_add(300, self._reset_pasting)
+        GLib.timeout_add(150, self._reset_pasting)
         return False
 
     def _reset_pasting(self):
@@ -494,27 +562,37 @@ class ClipVault:
         threading.Thread(target=run, daemon=True).start()
 
     def _read_wl_clipboard(self):
+        # Check available MIME types first to decide order
+        try:
+            types_r = subprocess.run(['wl-paste', '--list-types'],
+                                     capture_output=True, text=True, timeout=3)
+            mime_types = types_r.stdout if types_r.returncode == 0 else ''
+        except Exception:
+            mime_types = ''
+
+        # Image takes priority over file-path text
+        if 'image/' in mime_types:
+            try:
+                r = subprocess.run(['wl-paste', '--type', 'image/png'],
+                                   capture_output=True, timeout=3)
+                if r.returncode == 0 and r.stdout:
+                    b64 = base64.b64encode(r.stdout).decode()
+                    h   = hashlib.md5(b64.encode()).hexdigest()
+                    if h != self._last_hash:
+                        self._last_hash = h
+                        self._add('image', b64, h)
+                    return False
+            except Exception as e:
+                print(f"[wl-paste image] {e}")
+
         # Text
         try:
             r = subprocess.run(['wl-paste', '--no-newline'],
                                capture_output=True, text=True, timeout=3)
             if r.returncode == 0 and r.stdout.strip():
                 self._ingest_text(r.stdout)
-                return False
         except Exception as e:
             print(f"[wl-paste text] {e}")
-        # Image
-        try:
-            r = subprocess.run(['wl-paste', '--type', 'image/png'],
-                               capture_output=True, timeout=3)
-            if r.returncode == 0 and r.stdout:
-                b64 = base64.b64encode(r.stdout).decode()
-                h   = hashlib.md5(b64.encode()).hexdigest()
-                if h != self._last_hash:
-                    self._last_hash = h
-                    self._add('image', b64, h)
-        except Exception as e:
-            print(f"[wl-paste image] {e}")
         return False
 
     # ── Clipboard — X11 ───────────────────────────────────────────
@@ -543,11 +621,35 @@ class ClipVault:
             print(f"[image capture] {e}")
 
     def _ingest_text(self, text):
+        path = text.strip()
+        if self._try_ingest_image_file(path):
+            return
         h = hashlib.md5(text.encode('utf-8', errors='ignore')).hexdigest()
         if h != self._last_hash:
             self._last_hash = h
             self._add(classify(text), text, h)
             print(f"[clip] {classify(text)}: {text[:60].strip()!r}")
+
+    def _try_ingest_image_file(self, path):
+        IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'}
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in IMAGE_EXTS or not os.path.isfile(path):
+            return False
+        try:
+            pb = GdkPixbuf.Pixbuf.new_from_file(path)
+            ok, buf = pb.save_to_bufferv('png', [], [])
+            if not ok:
+                return False
+            b64 = base64.b64encode(bytes(buf)).decode()
+            h = hashlib.md5(b64.encode()).hexdigest()
+            if h != self._last_hash:
+                self._last_hash = h
+                self._add('image', b64, h)
+                print(f"[clip] image file: {path!r}")
+            return True
+        except Exception as e:
+            print(f"[clip] image file load failed: {e}")
+            return False
 
     def _add(self, ctype, content, h):
         self.history = [i for i in self.history if i.hash != h]
@@ -591,7 +693,7 @@ class ClipVault:
         return False
 
     def _keystroke_paste(self):
-        time.sleep(0.35)
+        time.sleep(0.12)
         if self._is_wayland:
             for cmd in (
                 ['ydotool', 'key', 'ctrl+v'],
