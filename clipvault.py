@@ -19,7 +19,7 @@ import os, sys, json, hashlib, base64, threading, time, subprocess, signal, re
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
-VERSION = '1.2.0'
+VERSION = '1.4.0'
 CONFIG_DIR    = os.path.expanduser('~/.config/clipvault')
 HISTORY_FILE  = os.path.join(CONFIG_DIR, 'history.json')
 SETTINGS_FILE = os.path.join(CONFIG_DIR, 'settings.json')

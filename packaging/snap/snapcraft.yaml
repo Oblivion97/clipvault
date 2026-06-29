@@ -1,6 +1,6 @@
 name: clipvault
 base: core22
-version: "1.2.0"
+version: "1.4.0"
 summary: Windows-style clipboard history for Linux (Win+V)
 description: |
   ClipVault brings the Windows clipboard history experience to Linux.
