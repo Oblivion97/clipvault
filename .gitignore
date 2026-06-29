@@ -19,6 +19,9 @@ packaging/deb/clipvault_*/
 packaging/rpm/build/
 packaging/zip_staging/
 
+# Release automation (private)
+release.sh
+
 # Claude Code
 .claude/
 
