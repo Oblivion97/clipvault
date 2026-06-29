@@ -33,7 +33,9 @@
       "Bash(git push *)",
       "Bash(clipvault --help)",
       "Bash(dpkg -l clipvault)",
-      "Bash(sudo apt-get install -y rpm)"
+      "Bash(sudo apt-get install -y rpm)",
+      "Bash(git -C /home/mahmudul/Documents/Development/Exp/clipvault add docs/ assets/screenshot.png)",
+      "Bash(git -C /home/mahmudul/Documents/Development/Exp/clipvault status --short)"
     ]
   }
 }

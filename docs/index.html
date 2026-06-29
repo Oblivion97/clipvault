@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipVault — Clipboard History for Linux</title>
+  <meta name="description" content="Windows-style clipboard history for Linux. Press Win+V, pick, paste." />
+  <link rel="icon" href="icon.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0d0d0d;
+      --white: #ffffff;
+      --grey-100: #f5f5f5;
+      --grey-200: #e8e8e8;
+      --grey-400: #aaaaaa;
+      --grey-600: #555555;
+      --accent: #0d0d0d;
+      --radius: 6px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--grey-200);
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+      text-decoration: none; color: var(--black);
+    }
+    .nav-brand img { width: 28px; height: 28px; }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      text-decoration: none; color: var(--grey-600);
+      font-size: 14px; font-weight: 500;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--black); }
+    .nav-github {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--black); color: var(--white);
+      text-decoration: none; font-size: 13px; font-weight: 600;
+      padding: 6px 14px; border-radius: var(--radius);
+      transition: background 0.15s;
+    }
+    .nav-github:hover { background: #333; }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 1100px; margin: 0 auto;
+      padding: 100px 2rem 80px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--grey-100); border: 1px solid var(--grey-200);
+      padding: 4px 12px; border-radius: 100px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.8px;
+      color: var(--grey-600); margin-bottom: 24px;
+    }
+    .hero-badge span { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: block; }
+    h1 {
+      font-size: 52px; font-weight: 800; line-height: 1.1;
+      letter-spacing: -1.5px; margin-bottom: 20px;
+    }
+    h1 em { font-style: normal; color: var(--grey-400); }
+    .hero-sub {
+      font-size: 18px; color: var(--grey-600);
+      margin-bottom: 36px; line-height: 1.7;
+    }
+    .hero-sub kbd {
+      background: var(--grey-100); border: 1px solid var(--grey-200);
+      padding: 2px 7px; border-radius: 4px;
+      font-family: monospace; font-size: 14px; color: var(--black);
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px; border-radius: var(--radius);
+      font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: all 0.15s; cursor: pointer; border: none;
+    }
+    .btn-primary {
+      background: var(--black); color: var(--white);
+    }
+    .btn-primary:hover { background: #333; }
+    .btn-outline {
+      background: transparent; color: var(--black);
+      border: 1.5px solid var(--grey-200);
+    }
+    .btn-outline:hover { border-color: var(--grey-600); }
+    .hero-img {
+      display: flex; justify-content: center;
+    }
+    .hero-img img {
+      width: 100%; max-width: 420px;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08);
+      border: 1px solid var(--grey-200);
+    }
+
+    /* ── Section shared ── */
+    section { padding: 80px 2rem; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      color: var(--grey-400); text-transform: uppercase; margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 36px; font-weight: 800; letter-spacing: -0.8px;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 16px; color: var(--grey-600); max-width: 560px;
+      margin-bottom: 48px;
+    }
+
+    /* ── Features ── */
+    #features { background: var(--grey-100); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+    }
+    .feature-card {
+      background: var(--white); border: 1px solid var(--grey-200);
+      border-radius: var(--radius); padding: 28px 24px;
+    }
+    .feature-icon {
+      font-size: 22px; margin-bottom: 14px;
+      width: 44px; height: 44px;
+      background: var(--grey-100); border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .feature-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--grey-600); line-height: 1.6; }
+
+    /* ── Download ── */
+    #download { border-top: 1px solid var(--grey-200); }
+    .download-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+      margin-bottom: 32px;
+    }
+    .download-card {
+      border: 1.5px solid var(--grey-200); border-radius: var(--radius);
+      padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: border-color 0.15s;
+    }
+    .download-card:hover { border-color: var(--black); }
+    .download-card-top { display: flex; align-items: center; gap: 12px; }
+    .distro-icon { font-size: 28px; }
+    .download-card h3 { font-size: 16px; font-weight: 700; }
+    .download-card p { font-size: 13px; color: var(--grey-600); flex: 1; }
+    .download-card .btn { align-self: flex-start; margin-top: auto; }
+    .download-note {
+      background: var(--grey-100); border: 1px solid var(--grey-200);
+      border-radius: var(--radius); padding: 16px 20px;
+      font-size: 13px; color: var(--grey-600);
+    }
+    .download-note code {
+      background: var(--white); border: 1px solid var(--grey-200);
+      padding: 2px 8px; border-radius: 4px;
+      font-family: monospace; font-size: 13px; color: var(--black);
+    }
+
+    /* ── Install ── */
+    #install { background: var(--grey-100); }
+    .install-steps { display: flex; flex-direction: column; gap: 16px; }
+    .install-step {
+      display: flex; gap: 20px; align-items: flex-start;
+      background: var(--white); border: 1px solid var(--grey-200);
+      border-radius: var(--radius); padding: 20px 24px;
+    }
+    .step-num {
+      width: 32px; height: 32px; min-width: 32px;
+      background: var(--black); color: var(--white);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .install-step h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .install-step pre {
+      background: var(--grey-100); border: 1px solid var(--grey-200);
+      padding: 10px 14px; border-radius: 4px;
+      font-family: monospace; font-size: 13px;
+      overflow-x: auto; white-space: pre-wrap;
+      margin-top: 8px; color: var(--black);
+    }
+
+    /* ── Community ── */
+    #community { border-top: 1px solid var(--grey-200); }
+    .community-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+    }
+    .community-card {
+      border: 1.5px solid var(--grey-200); border-radius: var(--radius);
+      padding: 28px 24px; text-decoration: none; color: var(--black);
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .community-card:hover {
+      border-color: var(--black);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .community-card-icon { font-size: 24px; }
+    .community-card h3 { font-size: 15px; font-weight: 700; }
+    .community-card p { font-size: 13px; color: var(--grey-600); }
+    .community-card .arrow {
+      margin-top: auto; font-size: 13px; color: var(--grey-400); font-weight: 600;
+    }
+
+    /* ── Author ── */
+    #author { background: var(--grey-100); border-top: 1px solid var(--grey-200); }
+    .author-card {
+      display: flex; gap: 40px; align-items: center;
+      background: var(--white); border: 1px solid var(--grey-200);
+      border-radius: var(--radius); padding: 40px;
+    }
+    .author-avatar {
+      width: 80px; height: 80px; min-width: 80px;
+      background: var(--black); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 800; color: var(--white);
+    }
+    .author-info h3 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .author-info p { font-size: 15px; color: var(--grey-600); margin-bottom: 20px; line-height: 1.7; }
+    .author-links { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--black); color: var(--white);
+      padding: 40px 2rem;
+      text-align: center;
+    }
+    footer .footer-inner { max-width: 1100px; margin: 0 auto; }
+    footer .footer-brand {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; margin-bottom: 16px;
+      font-size: 15px; font-weight: 700;
+    }
+    footer .footer-brand img { width: 24px; height: 24px; filter: invert(1); }
+    footer p { font-size: 13px; color: #666; }
+    footer a { color: #888; text-decoration: none; }
+    footer a:hover { color: var(--white); }
+
+    /* ── Dynamic release ── */
+    .release-version {
+      display: inline-block;
+      background: var(--grey-100); border: 1px solid var(--grey-200);
+      padding: 2px 10px; border-radius: 100px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+      color: var(--grey-600); margin-left: 10px; vertical-align: middle;
+    }
+    .dl-skeleton {
+      display: inline-block; width: 120px; height: 14px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding: 60px 1.5rem; gap: 40px; }
+      h1 { font-size: 38px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .download-grid { grid-template-columns: 1fr; }
+      .community-grid { grid-template-columns: 1fr; }
+      .author-card { flex-direction: column; gap: 24px; padding: 28px; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 30px; }
+      .section-title { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a class="nav-brand" href="#">
+    <img src="icon.png" alt="ClipVault" />
+    ClipVault
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#download">Download</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#community">Community</a></li>
+    <li><a href="#author">Author</a></li>
+  </ul>
+  <a class="nav-github" href="https://github.com/Oblivion97/clipvault" target="_blank">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+               0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+               -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+               .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+               -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+               .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+               .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+               0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    GitHub
+  </a>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="hero-text">
+    <div class="hero-badge">
+      <span></span>
+      <span id="hero-version">Latest Release</span>
+    </div>
+    <h1>Clipboard history<br/><em>for Linux.</em></h1>
+    <p class="hero-sub">
+      Press <kbd>Win+V</kbd> to open a searchable popup of everything
+      you've copied — text, links, code, and images. Click or press
+      Enter to paste instantly.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#download">
+        ↓ Download
+      </a>
+      <a class="btn btn-outline" href="https://github.com/Oblivion97/clipvault" target="_blank">
+        View on GitHub →
+      </a>
+    </div>
+  </div>
+  <div class="hero-img">
+    <img src="screenshot.png" alt="ClipVault screenshot" />
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="section-inner">
+    <p class="section-label">Features</p>
+    <h2 class="section-title">Everything you need.<br/>Nothing you don't.</h2>
+    <p class="section-sub">ClipVault runs silently in the background and stays out of your way until you need it.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⌨️</div>
+        <h3>Win+V Shortcut</h3>
+        <p>Opens your clipboard history from anywhere, just like Windows 11. Registered automatically at install.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Instant Search</h3>
+        <p>Start typing the moment the popup opens to filter your history in real time. No clicks needed.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3>Image Previews</h3>
+        <p>Copied images show live thumbnails in the list so you always know what you're pasting.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>Persistent History</h3>
+        <p>Up to 200 items saved across reboots. Your history is always there when you need it.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <h3>Wayland + X11</h3>
+        <p>Full support for both display servers. Works on GNOME, KDE, Cinnamon, MATE, and more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <h3>Settings Page</h3>
+        <p>Configure history limit, paste speed, image capture, privacy mode, and more — all in-app.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h3>System Tray Icon</h3>
+        <p>Lives quietly in your tray. Right-click to pause monitoring, clear history, or open settings.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🚀</div>
+        <h3>Auto-starts</h3>
+        <p>Registers itself to start silently at every login. Zero setup after install.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🐧</div>
+        <h3>Cross-distro</h3>
+        <p>Ubuntu, Fedora, Arch, Pop!_OS, Mint, openSUSE, Debian — one installer handles all.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Download ── -->
+<section id="download">
+  <div class="section-inner">
+    <p class="section-label">Download</p>
+    <h2 class="section-title">Get ClipVault</h2>
+    <p class="section-sub">
+      Choose the package for your distro, or use the universal zip for any Linux system.
+      <span id="download-version-label"></span>
+    </p>
+    <div class="download-grid">
+      <div class="download-card">
+        <div class="download-card-top">
+          <span class="distro-icon">🟠</span>
+          <h3>Debian / Ubuntu</h3>
+        </div>
+        <p>Ubuntu, Pop!_OS, Linux Mint, Debian, Zorin OS, elementary OS</p>
+        <a id="dl-deb" class="btn btn-primary" href="https://github.com/Oblivion97/clipvault/releases/latest">
+          ↓ Download .deb
+        </a>
+      </div>
+      <div class="download-card">
+        <div class="download-card-top">
+          <span class="distro-icon">🔵</span>
+          <h3>Fedora / openSUSE</h3>
+        </div>
+        <p>Fedora, openSUSE Tumbleweed &amp; Leap, RHEL, CentOS Stream</p>
+        <a id="dl-rpm" class="btn btn-primary" href="https://github.com/Oblivion97/clipvault/releases/latest">
+          ↓ Download .rpm
+        </a>
+      </div>
+      <div class="download-card">
+        <div class="download-card-top">
+          <span class="distro-icon">⚫</span>
+          <h3>Universal ZIP</h3>
+        </div>
+        <p>Arch, Manjaro, EndeavourOS, and any other Linux distro with Python 3.8+</p>
+        <a id="dl-zip" class="btn btn-outline" href="https://github.com/Oblivion97/clipvault/releases/latest">
+          ↓ Download .zip
+        </a>
+      </div>
+    </div>
+    <div class="download-note">
+      All releases and changelogs are on
+      <a href="https://github.com/Oblivion97/clipvault/releases" target="_blank">GitHub Releases →</a>
+      &nbsp;·&nbsp; Source code:
+      <code>git clone https://github.com/Oblivion97/clipvault</code>
+    </div>
+  </div>
+</section>
+
+<!-- ── Install ── -->
+<section id="install">
+  <div class="section-inner">
+    <p class="section-label">Install</p>
+    <h2 class="section-title">Up in 30 seconds.</h2>
+    <p class="section-sub">The installer detects your distro and handles all dependencies automatically.</p>
+    <div class="install-steps">
+      <div class="install-step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Debian / Ubuntu / Mint / Pop!_OS</h4>
+          <pre id="cmd-deb">sudo dpkg -i clipvault_..._all.deb
+sudo apt-get install -f</pre>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Fedora</h4>
+          <pre id="cmd-fedora">sudo dnf install clipvault-....noarch.rpm</pre>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>openSUSE</h4>
+          <pre id="cmd-suse">sudo zypper install clipvault-....noarch.rpm</pre>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="step-num">4</div>
+        <div>
+          <h4>Arch / Manjaro / Any distro — Universal installer</h4>
+          <pre id="cmd-zip">wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-....zip
+unzip clipvault-....zip &amp;&amp; cd clipvault-...
+chmod +x install.sh &amp;&amp; ./install.sh</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Community ── -->
+<section id="community">
+  <div class="section-inner">
+    <p class="section-label">Community</p>
+    <h2 class="section-title">Open source &amp; open to contributions.</h2>
+    <p class="section-sub">ClipVault is MIT licensed. All contributions are welcome regardless of experience level.</p>
+    <div class="community-grid">
+      <a class="community-card" href="https://github.com/Oblivion97/clipvault/issues/new" target="_blank">
+        <div class="community-card-icon">🐛</div>
+        <h3>Report a Bug</h3>
+        <p>Found something broken? Open an issue with steps to reproduce and we'll fix it.</p>
+        <span class="arrow">Open issue →</span>
+      </a>
+      <a class="community-card" href="https://github.com/Oblivion97/clipvault/discussions" target="_blank">
+        <div class="community-card-icon">💡</div>
+        <h3>Request a Feature</h3>
+        <p>Have an idea? Start a discussion before building so we can align on approach.</p>
+        <span class="arrow">Start discussion →</span>
+      </a>
+      <a class="community-card" href="https://github.com/Oblivion97/clipvault/fork" target="_blank">
+        <div class="community-card-icon">🔀</div>
+        <h3>Contribute Code</h3>
+        <p>Fork the repo, branch off master, and submit a pull request. One fix per PR keeps review fast.</p>
+        <span class="arrow">Fork on GitHub →</span>
+      </a>
+      <a class="community-card" href="https://github.com/Oblivion97/clipvault/issues?q=label%3A%22good+first+issue%22" target="_blank">
+        <div class="community-card-icon">🌱</div>
+        <h3>Good First Issues</h3>
+        <p>New to open source? Browse issues tagged "good first issue" — small, well-scoped, and beginner-friendly.</p>
+        <span class="arrow">Browse issues →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Author ── -->
+<section id="author">
+  <div class="section-inner">
+    <p class="section-label">Author</p>
+    <div class="author-card">
+      <div class="author-avatar">M</div>
+      <div class="author-info">
+        <h3>H M Mahmudul Hasan</h3>
+        <p>
+          Software developer and open source enthusiast. Built ClipVault to bring the
+          Windows 11 clipboard experience to Linux — a tool I wanted but couldn't find.
+          If it saves you time, consider starring the repo or contributing.
+        </p>
+        <div class="author-links">
+          <a class="btn btn-primary" href="https://www.linkedin.com/in/hmmahmudulhasan/" target="_blank">
+            LinkedIn →
+          </a>
+          <a class="btn btn-outline" href="https://github.com/Oblivion97" target="_blank">
+            GitHub →
+          </a>
+          <a class="btn btn-outline" href="mailto:mahmudul.uiu041@gmail.com">
+            Email →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="icon.png" alt="ClipVault" />
+      ClipVault
+    </div>
+    <p>
+      MIT License &nbsp;·&nbsp;
+      <a href="https://github.com/Oblivion97/clipvault" target="_blank">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Oblivion97/clipvault/releases" target="_blank">Releases</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Oblivion97/clipvault/issues" target="_blank">Issues</a>
+    </p>
+    <p style="margin-top:8px;">Made with ♥ by H M Mahmudul Hasan</p>
+  </div>
+</footer>
+
+<script>
+(async () => {
+  const REPO = 'Oblivion97/clipvault';
+  const API  = `https://api.github.com/repos/${REPO}/releases/latest`;
+  const BASE = `https://github.com/${REPO}/releases/latest/download`;
+
+  try {
+    const res  = await fetch(API, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) return;
+    const data = await res.json();
+    const ver  = data.tag_name.replace(/^v/, '');   // e.g. "1.2.0"
+    const tag  = data.tag_name;                      // e.g. "v1.2.0"
+
+    // Hero badge
+    const heroVer = document.getElementById('hero-version');
+    if (heroVer) heroVer.textContent = `${tag} — Latest Release`;
+
+    // Download section label
+    const dlLabel = document.getElementById('download-version-label');
+    if (dlLabel) {
+      dlLabel.innerHTML = `<span class="release-version">${tag}</span>`;
+    }
+
+    // Download buttons
+    const setHref = (id, url) => {
+      const el = document.getElementById(id);
+      if (el) el.href = url;
+    };
+    setHref('dl-deb', `${BASE}/clipvault_${ver}_all.deb`);
+    setHref('dl-rpm', `${BASE}/clipvault-${ver}.noarch.rpm`);
+    setHref('dl-zip', `${BASE}/clipvault-${ver}.zip`);
+
+    // Install commands
+    const set = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('cmd-deb',
+      `sudo dpkg -i clipvault_${ver}_all.deb\nsudo apt-get install -f`);
+    set('cmd-fedora',
+      `sudo dnf install clipvault-${ver}.noarch.rpm`);
+    set('cmd-suse',
+      `sudo zypper install clipvault-${ver}.noarch.rpm`);
+    set('cmd-zip',
+      `wget ${BASE}/clipvault-${ver}.zip\nunzip clipvault-${ver}.zip && cd clipvault-${ver}\nchmod +x install.sh && ./install.sh`);
+
+  } catch (e) {
+    // silently fall back to the placeholder text already in the HTML
+    console.warn('Could not fetch latest release:', e);
+  }
+})();
+</script>
+</body>
+</html>
