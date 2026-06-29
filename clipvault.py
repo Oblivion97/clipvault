@@ -313,6 +313,26 @@ button.cv-save-btn:hover {
 }
 """
 
+# ── Icon helper ───────────────────────────────────────────────────────────────
+_ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
+
+def _set_app_icon(window):
+    for size in [256, 128, 64, 48, 32, 16]:
+        path = os.path.join(_ICON_DIR, f'icon_{size}.png')
+        if os.path.exists(path):
+            try:
+                pb = GdkPixbuf.Pixbuf.new_from_file(path)
+                window.set_icon(pb)
+                return
+            except Exception:
+                pass
+    fallback = os.path.join(_ICON_DIR, 'icon.png')
+    if os.path.exists(fallback):
+        try:
+            window.set_icon(GdkPixbuf.Pixbuf.new_from_file(fallback))
+        except Exception:
+            pass
+
 # ── Window ────────────────────────────────────────────────────────────────────
 class ClipWindow(Gtk.Window):
 
@@ -332,6 +352,7 @@ class ClipWindow(Gtk.Window):
         self.set_skip_pager_hint(True)
         self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         self.get_style_context().add_class('cv-win')
+        _set_app_icon(self)
 
         self.connect('delete-event', lambda *_: self._dismiss() or True)
         self.connect('focus-out-event', self._on_window_focus_out)
@@ -669,6 +690,7 @@ class SettingsWindow(Gtk.Window):
         self.set_keep_above(True)
         self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         self.get_style_context().add_class('cv-settings')
+        _set_app_icon(self)
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(root)
@@ -765,6 +787,38 @@ class SettingsWindow(Gtk.Window):
         # ── Performance
         section("PERFORMANCE")
         spin_row('paste_delay_ms',    "Paste delay (ms)",    "Delay before simulating Ctrl+V after paste",    50, 500, 10)
+
+        # Community section
+        section("COMMUNITY")
+
+        def link_row(label, desc, url, url_label):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row.get_style_context().add_class('cv-setting-row')
+            info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+            info.set_hexpand(True)
+            n = Gtk.Label(label=label)
+            n.get_style_context().add_class('cv-setting-name')
+            n.set_halign(Gtk.Align.START)
+            d = Gtk.Label(label=desc)
+            d.get_style_context().add_class('cv-setting-desc')
+            d.set_halign(Gtk.Align.START)
+            info.pack_start(n, False, False, 0)
+            info.pack_start(d, False, False, 0)
+            btn = Gtk.LinkButton.new_with_label(url, url_label)
+            btn.get_style_context().add_class('cv-author-link')
+            btn.set_valign(Gtk.Align.CENTER)
+            row.pack_start(info, True, True, 0)
+            row.pack_end(btn, False, False, 0)
+            body.pack_start(row, False, False, 0)
+
+        link_row("Report a bug",       "Found something broken? Let us know",
+                 "https://github.com/Oblivion97/clipvault/issues/new", "Open issue →")
+        link_row("Request a feature",  "Have an idea? Start a discussion",
+                 "https://github.com/Oblivion97/clipvault/discussions", "Discuss →")
+        link_row("Contribute code",    "Fork, branch, and submit a pull request",
+                 "https://github.com/Oblivion97/clipvault", "View on GitHub →")
+        link_row("Star the project",   "Show support and help others discover it",
+                 "https://github.com/Oblivion97/clipvault", "GitHub →")
 
         # About section
         section("ABOUT")

@@ -3,7 +3,7 @@
 **Windows-style clipboard history for Linux — press Win+V, pick, paste.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/YOUR_USERNAME/clipvault?color=white)](https://github.com/YOUR_USERNAME/clipvault/releases)
+[![Release](https://img.shields.io/github/v/release/Oblivion97/clipvault?color=white)](https://github.com/Oblivion97/clipvault/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux-white.svg)]()
 [![Wayland](https://img.shields.io/badge/Wayland-ready-white.svg)]()
 
@@ -31,7 +31,7 @@ Enter to paste — just like Windows 11 clipboard history.
 ## Install
 
 ```bash
-wget https://github.com/YOUR_USERNAME/clipvault/releases/latest/download/clipvault-1.0.0.zip
+wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.0.0.zip
 unzip clipvault-1.0.0.zip -d clipvault && cd clipvault
 chmod +x install.sh && ./install.sh
 ```
@@ -119,17 +119,38 @@ rm -f  ~/.local/share/applications/clipvault.desktop
 
 ---
 
-## Contributing
+## Community & Contributing
 
-PRs are welcome. Please open an issue first for major changes.
+ClipVault is open source and contributions of any kind are welcome — bug fixes, new features, distro support, translations, or just feedback.
+
+### Ways to contribute
+
+- **Report a bug** — [Open an issue](https://github.com/Oblivion97/clipvault/issues) with steps to reproduce
+- **Request a feature** — [Start a discussion](https://github.com/Oblivion97/clipvault/discussions) before building so we can align
+- **Submit a fix** — Fork, branch, PR. Keep changes focused and describe the why
+- **Improve docs** — Typos, clearer wording, missing distro coverage — all appreciated
+- **Test on your distro** — Try it and report back if something breaks
+
+### Getting started
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/clipvault
+git clone https://github.com/Oblivion97/clipvault
 cd clipvault
 python3 clipvault.py
 ```
 
-Update [CHANGELOG.md](CHANGELOG.md) for any user-facing changes.
+### Guidelines
+
+- Open an issue before starting large changes
+- One feature or fix per pull request
+- Update [CHANGELOG.md](CHANGELOG.md) for any user-facing changes
+- Keep the installer cross-distro — test on at least one non-Ubuntu system if touching `install.sh`
+
+### Good first issues
+
+Look for issues tagged [`good first issue`](https://github.com/Oblivion97/clipvault/issues?q=label%3A%22good+first+issue%22) — these are small, well-scoped tasks ideal for first-time contributors.
+
+All contributors are welcome regardless of experience level.
 
 ---
 

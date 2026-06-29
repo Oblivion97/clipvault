@@ -177,6 +177,22 @@ hdr "── Step 4: Installing app files"
 mkdir -p "$INSTALL_DIR"
 cp "$SCRIPT_DIR/clipvault.py" "$INSTALL_DIR/clipvault.py"
 chmod +x "$INSTALL_DIR/clipvault.py"
+
+# Copy assets (icons)
+if [ -d "$SCRIPT_DIR/assets" ]; then
+    cp -r "$SCRIPT_DIR/assets" "$INSTALL_DIR/assets"
+fi
+
+# Install icons to system theme
+for size in 16 32 48 64 128 256; do
+    icon_src="$SCRIPT_DIR/assets/icon_${size}.png"
+    if [ -f "$icon_src" ]; then
+        icon_dir="$HOME/.local/share/icons/hicolor/${size}x${size}/apps"
+        mkdir -p "$icon_dir"
+        cp "$icon_src" "$icon_dir/clipvault.png"
+    fi
+done
+gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 ok "App installed to $INSTALL_DIR"
 
 # ── Desktop entry ─────────────────────────────────────────────────────────────
@@ -186,7 +202,7 @@ cat > "$APPS_DIR/clipvault.desktop" << EOF
 Name=ClipVault
 Comment=Windows-style clipboard history (Win+V)
 Exec=python3 $INSTALL_DIR/clipvault.py
-Icon=edit-paste
+Icon=clipvault
 Terminal=false
 Type=Application
 Categories=Utility;GTK;
@@ -202,7 +218,7 @@ cat > "$AUTOSTART_DIR/clipvault.desktop" << EOF
 Name=ClipVault
 Comment=Clipboard history daemon
 Exec=python3 $INSTALL_DIR/clipvault.py
-Icon=edit-paste
+Icon=clipvault
 Terminal=false
 Type=Application
 X-GNOME-Autostart-enabled=true
