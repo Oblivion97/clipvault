@@ -185,18 +185,6 @@ All contributors are welcome regardless of experience level.
 
 ---
 
-## Publishing a release
-
-```bash
-./release.sh 1.3.0
-```
-
-This will bump the version, build `.deb`, `.rpm`, and `.zip` packages, commit, tag, push, and upload all assets to a GitHub release automatically.
-
-Requires `gh` CLI to be installed and authenticated: `sudo apt install gh && gh auth login`
-
----
-
 ## License
 
 [MIT](LICENSE)
