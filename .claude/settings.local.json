@@ -15,7 +15,18 @@
       "Bash(echo \"EXIT CODE: $?\")",
       "Bash(DISPLAY=:0 python3 /home/mahmudul/Documents/Development/Exp/clipvault/clipvault.py)",
       "Bash(echo \"signal sent: $?\")",
-      "Bash(echo \"Signal sent: $?\")"
+      "Bash(echo \"Signal sent: $?\")",
+      "Bash(cp -r /home/mahmudul/Documents/Development/Exp/clipvault/assets/. /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/usr/share/clipvault/assets/)",
+      "Bash(chmod 755 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/DEBIAN/postinst /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/DEBIAN/prerm /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/DEBIAN/postrm)",
+      "Bash(chmod 755 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/usr/bin/clipvault)",
+      "Bash(chmod 644 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/usr/share/clipvault/clipvault.py)",
+      "Bash(chmod 644 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/usr/share/applications/clipvault.desktop)",
+      "Bash(dpkg-deb --build --root-owner-group /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0_all.deb)",
+      "Bash(echo \"Done: $?\")",
+      "Bash(chmod 644 /home/mahmudul/Documents/Development/Exp/clipvault/packaging/deb/clipvault_1.2.0/etc/xdg/autostart/clipvault.desktop)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(chmod +x /home/mahmudul/Documents/Development/Exp/clipvault/release.sh)",
+      "Bash(./release.sh 1.2.0)"
     ]
   }
 }

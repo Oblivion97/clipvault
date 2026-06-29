@@ -1,10 +1,10 @@
 # Maintainer: YOUR_NAME <your@email.com>
 pkgname=clipvault
-pkgver=1.0.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="Windows-style clipboard history manager for Linux (Win+V)"
 arch=('any')
-url="https://github.com/YOUR_USERNAME/clipvault"
+url="https://github.com/Oblivion97/clipvault"
 license=('MIT')
 depends=(
     'python'
@@ -19,8 +19,8 @@ optdepends=(
     'wtype: auto-paste on Wayland (alternative to ydotool)'
 )
 makedepends=('python-pip')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/YOUR_USERNAME/clipvault/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')   # replace with actual sha256 after first release
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Oblivion97/clipvault/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('f1b8636c27b483c79cdc9d10627365d7b6a854ce98b82f1fec5e0fa01dcce30f')   # replace with actual sha256 after first release
 
 package() {
     cd "$srcdir/$pkgname-$pkgver"

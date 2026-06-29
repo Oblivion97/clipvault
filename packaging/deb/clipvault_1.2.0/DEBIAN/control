@@ -1,0 +1,21 @@
+Package: clipvault
+Version: 1.2.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.8), python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, gir1.2-gdkpixbuf-2.0, wl-clipboard | xdotool, python3-pynput
+Maintainer: H M Mahmudul Hasan <mahmudul.uiu041@gmail.com>
+Homepage: https://github.com/Oblivion97/clipvault
+Description: Windows-style clipboard history for Linux
+ ClipVault brings the Windows 11 clipboard history experience to Linux.
+ Press Win+V to open a searchable popup of everything you have copied —
+ text, links, code snippets and images — then click or press Enter to paste.
+ .
+ Features:
+  - Win+V opens clipboard history from anywhere
+  - Stores up to 200 items, persists across reboots
+  - Image capture with live preview thumbnails
+  - Instant search and filter
+  - Settings page with privacy and behaviour options
+  - Wayland and X11 support
+  - Auto-starts silently at login

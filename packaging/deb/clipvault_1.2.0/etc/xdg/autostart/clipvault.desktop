@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ClipVault
+Comment=Clipboard history daemon
+Exec=clipvault
+Icon=clipvault
+Terminal=false
+Type=Application
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3
