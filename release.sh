@@ -244,11 +244,18 @@ else
     warn "assets/screenshot.png not found — skipping screenshot sync"
 fi
 
+# Bump version in website og:url and any static version references
+sed -i "s|clipvault/releases/latest/download/clipvault[_-][0-9]*\.[0-9]*\.[0-9]*|clipvault/releases/latest/download/clipvault-${VERSION}|g" \
+    "$SCRIPT_DIR/docs/index.html" 2>/dev/null || true
+ok "docs/index.html version references updated"
+
 # ── Step 7: Git tag + GitHub release ─────────────────────────────────────────
 hdr "── Step 7: Git commit, tag and GitHub release"
 
 cd "$SCRIPT_DIR"
-git add -A
+info "Staging all changes (source, docs, assets)..."
+git add clipvault.py README.md CHANGELOG.md docs/ assets/ packaging/ release.sh .gitignore
+git status --short
 git commit -m "Release v$VERSION" || true
 git tag "v$VERSION" 2>/dev/null || warn "Tag v$VERSION already exists — skipping"
 git push origin master --tags
