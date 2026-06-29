@@ -65,31 +65,33 @@
     /* ── Hero ── */
     .hero {
       max-width: 1100px; margin: 0 auto;
-      padding: 100px 2rem 80px;
+      padding: 80px 2rem 80px;
       display: grid; grid-template-columns: 1fr 1fr;
-      gap: 60px; align-items: center;
+      gap: 48px; align-items: center;
     }
+    .hero-text { min-width: 0; }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 8px;
       background: var(--grey-100); border: 1px solid var(--grey-200);
-      padding: 4px 12px; border-radius: 100px;
-      font-size: 12px; font-weight: 600; letter-spacing: 0.8px;
-      color: var(--grey-600); margin-bottom: 24px;
+      padding: 5px 14px; border-radius: 100px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+      color: var(--grey-600); margin-bottom: 28px;
+      white-space: nowrap; max-width: 100%;
     }
-    .hero-badge span { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: block; }
+    .hero-badge .dot { width: 7px; height: 7px; min-width: 7px; background: #22c55e; border-radius: 50%; display: block; }
     h1 {
-      font-size: 52px; font-weight: 800; line-height: 1.1;
+      font-size: 48px; font-weight: 800; line-height: 1.08;
       letter-spacing: -1.5px; margin-bottom: 20px;
     }
     h1 em { font-style: normal; color: var(--grey-400); }
     .hero-sub {
-      font-size: 18px; color: var(--grey-600);
-      margin-bottom: 36px; line-height: 1.7;
+      font-size: 17px; color: var(--grey-600);
+      margin-bottom: 36px; line-height: 1.75; max-width: 440px;
     }
     .hero-sub kbd {
       background: var(--grey-100); border: 1px solid var(--grey-200);
       padding: 2px 7px; border-radius: 4px;
-      font-family: monospace; font-size: 14px; color: var(--black);
+      font-family: monospace; font-size: 13px; color: var(--black);
     }
     .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
     .btn {
@@ -108,12 +110,12 @@
     }
     .btn-outline:hover { border-color: var(--grey-600); }
     .hero-img {
-      display: flex; justify-content: center;
+      display: flex; justify-content: center; align-items: center;
     }
     .hero-img img {
-      width: 100%; max-width: 420px;
-      border-radius: 12px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08);
+      width: 100%; max-width: 380px; height: auto;
+      border-radius: 14px; display: block;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.07);
       border: 1px solid var(--grey-200);
     }
 
@@ -277,7 +279,9 @@
 
     /* ── Responsive ── */
     @media (max-width: 900px) {
-      .hero { grid-template-columns: 1fr; padding: 60px 1.5rem; gap: 40px; }
+      .hero { grid-template-columns: 1fr; padding: 56px 1.5rem 60px; gap: 40px; }
+      .hero-img { order: -1; }
+      .hero-img img { max-width: 320px; }
       h1 { font-size: 38px; }
       .features-grid { grid-template-columns: 1fr 1fr; }
       .download-grid { grid-template-columns: 1fr; }
@@ -326,7 +330,7 @@
 <div class="hero">
   <div class="hero-text">
     <div class="hero-badge">
-      <span></span>
+      <span class="dot"></span>
       <span id="hero-version">Latest Release</span>
     </div>
     <h1>Clipboard history<br/><em>for Linux.</em></h1>
