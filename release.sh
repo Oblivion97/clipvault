@@ -199,8 +199,48 @@ SHA256=$(sha256sum "$ZIP_OUT" | awk '{print $1}')
 sed -i "s/sha256sums=('SKIP')/sha256sums=('$SHA256')/" "$SCRIPT_DIR/packaging/aur/PKGBUILD" || true
 ok "sha256: $SHA256"
 
-# ── Step 5: Copy snap yaml to dist ───────────────────────────────────────────
-hdr "── Step 5: Snap"
+# ── Step 5: Build .rpm (Fedora / openSUSE) ───────────────────────────────────
+hdr "── Step 5: Building .rpm"
+
+if ! command -v rpmbuild &>/dev/null; then
+    info "rpmbuild not found — installing rpm tools..."
+    sudo apt-get install -y rpm 2>/dev/null || warn "Could not install rpm tools — skipping .rpm build"
+fi
+
+if command -v rpmbuild &>/dev/null; then
+    RPM_BUILD="$SCRIPT_DIR/packaging/rpm/build"
+    rm -rf "$RPM_BUILD"
+    mkdir -p "$RPM_BUILD"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+    # Update version in spec
+    SPEC_TMP="$RPM_BUILD/SPECS/clipvault.spec"
+    cp "$SCRIPT_DIR/packaging/rpm/clipvault.spec" "$SPEC_TMP"
+    sed -i "s/^Version:.*/Version:        $VERSION/" "$SPEC_TMP"
+    sed -i "s/^Source0:.*/Source0:        clipvault-$VERSION.zip/" "$SPEC_TMP"
+
+    # Put the zip in SOURCES
+    cp "$ZIP_OUT" "$RPM_BUILD/SOURCES/clipvault-$VERSION.zip"
+
+    rpmbuild -bb "$SPEC_TMP" \
+        --define "_topdir $RPM_BUILD" \
+        --define "_builddir $RPM_BUILD/BUILD" \
+        --define "_rpmdir $RPM_BUILD/RPMS" 2>&1 | tail -5
+
+    RPM_FILE=$(find "$RPM_BUILD/RPMS" -name "*.rpm" | head -1)
+    if [[ -n "$RPM_FILE" ]]; then
+        RPM_OUT="$DIST_DIR/clipvault-${VERSION}.noarch.rpm"
+        cp "$RPM_FILE" "$RPM_OUT"
+        ok ".rpm → $RPM_OUT"
+    else
+        warn ".rpm build failed — check spec file"
+    fi
+    rm -rf "$RPM_BUILD"
+else
+    warn "Skipping .rpm — rpmbuild not available"
+fi
+
+# ── Step 6: Snap ─────────────────────────────────────────────────────────────
+hdr "── Step 6: Snap"
 if command -v snapcraft &>/dev/null; then
     info "snapcraft found — run manually: cd packaging/snap && snapcraft pack --destructive-mode"
 else
@@ -209,12 +249,6 @@ fi
 cp "$SCRIPT_DIR/packaging/snap/snapcraft.yaml" "$DIST_DIR/snapcraft_${VERSION}.yaml"
 ok "snapcraft.yaml copied to dist"
 
-# ── Step 6: Summary ───────────────────────────────────────────────────────────
-hdr "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${BOLD}Release v$VERSION ready in: dist/v$VERSION/${NC}"
-echo ""
-ls -lh "$DIST_DIR"
-echo ""
 # ── Step 7: Git tag + GitHub release ─────────────────────────────────────────
 hdr "── Step 7: Git commit, tag and GitHub release"
 
@@ -228,12 +262,15 @@ ok "Pushed to GitHub"
 # Upload all dist files as GitHub release assets
 if command -v gh &>/dev/null; then
     info "Creating GitHub release v$VERSION..."
+    ASSETS=()
+    for f in "$DIST_DIR"/*.deb "$DIST_DIR"/*.zip "$DIST_DIR"/*.rpm; do
+        [[ -f "$f" ]] && ASSETS+=("$f")
+    done
     gh release create "v$VERSION" \
         --title "ClipVault v$VERSION" \
         --notes "See [CHANGELOG.md](https://github.com/Oblivion97/clipvault/blob/master/CHANGELOG.md) for what's new." \
-        "$DIST_DIR"/*.deb \
-        "$DIST_DIR"/*.zip
-    ok "GitHub release created with assets"
+        "${ASSETS[@]}"
+    ok "GitHub release created with ${#ASSETS[@]} assets"
 else
     warn "gh CLI not found — install it to auto-upload: sudo apt install gh"
     echo "  Manual upload: go to https://github.com/Oblivion97/clipvault/releases/new"

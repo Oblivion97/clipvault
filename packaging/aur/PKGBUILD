@@ -1,6 +1,6 @@
 # Maintainer: YOUR_NAME <your@email.com>
 pkgname=clipvault
-pkgver=1.3.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="Windows-style clipboard history manager for Linux (Win+V)"
 arch=('any')

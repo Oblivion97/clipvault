@@ -7,13 +7,19 @@ Win+V opens clipboard history. Click or Enter to paste.
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
+try:
+    gi.require_version('AppIndicator3', '0.1')
+    from gi.repository import AppIndicator3
+    HAS_INDICATOR = True
+except Exception:
+    HAS_INDICATOR = False
 from gi.repository import Gtk, Gdk, GLib, GdkPixbuf, Pango
 
 import os, sys, json, hashlib, base64, threading, time, subprocess, signal, re
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
-VERSION = '1.3.0'
+VERSION = '1.2.0'
 CONFIG_DIR    = os.path.expanduser('~/.config/clipvault')
 HISTORY_FILE  = os.path.join(CONFIG_DIR, 'history.json')
 SETTINGS_FILE = os.path.join(CONFIG_DIR, 'settings.json')
@@ -877,9 +883,75 @@ class ClipVault:
         else:
             GLib.timeout_add(500, self._poll_clipboard)
 
+        self._build_tray()
+
         mode = 'Wayland' if self._is_wayland else 'X11'
         print(f"ClipVault running (PID {os.getpid()}) [{mode}]")
         print("Trigger: Win+V  or  pkill -USR1 -f clipvault.py")
+
+    def _build_tray(self):
+        icon_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'assets', 'icon_48.png')
+
+        if HAS_INDICATOR:
+            self._indicator = AppIndicator3.Indicator.new(
+                'clipvault',
+                icon_path if os.path.exists(icon_path) else 'edit-paste',
+                AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
+            self._indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
+            self._indicator.set_menu(self._tray_menu())
+        else:
+            self._status_icon = Gtk.StatusIcon()
+            if os.path.exists(icon_path):
+                self._status_icon.set_from_file(icon_path)
+            else:
+                self._status_icon.set_from_icon_name('edit-paste')
+            self._status_icon.set_tooltip_text('ClipVault')
+            self._status_icon.connect('activate', lambda *_: GLib.idle_add(self._show))
+            self._status_icon.connect('popup-menu', self._on_tray_popup)
+
+    def _tray_menu(self):
+        menu = Gtk.Menu()
+
+        item_open = Gtk.MenuItem(label='Open Clipboard History')
+        item_open.connect('activate', lambda *_: GLib.idle_add(self._show))
+        menu.append(item_open)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        self._tray_pause_item = Gtk.CheckMenuItem(label='Pause Monitoring')
+        self._tray_pause_item.set_active(self.settings.get('pause_monitoring'))
+        self._tray_pause_item.connect('toggled', self._on_tray_pause)
+        menu.append(self._tray_pause_item)
+
+        item_clear = Gtk.MenuItem(label='Clear History')
+        item_clear.connect('activate', lambda *_: (self.clear_all(),
+                           self._win and self._win._render(self.history)))
+        menu.append(item_clear)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        item_settings = Gtk.MenuItem(label='Settings')
+        item_settings.connect('activate', lambda *_: SettingsWindow(self).show_all())
+        menu.append(item_settings)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        item_quit = Gtk.MenuItem(label='Quit')
+        item_quit.connect('activate', lambda *_: Gtk.main_quit())
+        menu.append(item_quit)
+
+        menu.show_all()
+        return menu
+
+    def _on_tray_pause(self, item):
+        self.settings.set('pause_monitoring', item.get_active())
+
+    def _on_tray_popup(self, icon, button, time):
+        menu = self._tray_menu()
+        menu.popup(None, None, Gtk.StatusIcon.position_menu,
+                   icon, button, time)
 
     def _apply_settings(self):
         if self._win:
