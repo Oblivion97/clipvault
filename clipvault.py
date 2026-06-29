@@ -232,6 +232,7 @@ class ClipWindow(Gtk.Window):
         # Keyboard on listbox: Enter, Delete, Escape, type-to-search
         self.listbox.connect('key-press-event', self._on_listbox_key)
         scroll.add(self.listbox)
+        self._scroll = scroll
         root.pack_start(scroll, True, True, 0)
 
         # Footer
@@ -350,6 +351,10 @@ class ClipWindow(Gtk.Window):
                 nxt = max(0, min(len(rows) - 1, idx + d))
                 self.listbox.select_row(rows[nxt])
                 self.listbox.grab_focus()
+                rows[nxt].grab_focus()
+                adj = self._scroll.get_vadjustment()
+                alloc = rows[nxt].get_allocation()
+                adj.clamp_page(alloc.y, alloc.y + alloc.height)
             return True
         if k == Gdk.KEY_Delete:
             self._delete_selected()
