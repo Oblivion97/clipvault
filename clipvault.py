@@ -13,6 +13,7 @@ import os, sys, json, hashlib, base64, threading, time, subprocess, signal, re
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
+VERSION       = '1.2.0'
 CONFIG_DIR    = os.path.expanduser('~/.config/clipvault')
 HISTORY_FILE  = os.path.join(CONFIG_DIR, 'history.json')
 SETTINGS_FILE = os.path.join(CONFIG_DIR, 'settings.json')
@@ -698,7 +699,7 @@ class SettingsWindow(Gtk.Window):
         # Header
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         hdr.get_style_context().add_class('cv-settings-header')
-        t = Gtk.Label(label="SETTINGS")
+        t = Gtk.Label(label=f"SETTINGS  —  v{VERSION}")
         t.get_style_context().add_class('cv-settings-title')
         t.set_halign(Gtk.Align.START)
         hdr.pack_start(t, True, True, 0)

@@ -31,8 +31,8 @@ Enter to paste — just like Windows 11 clipboard history.
 ## Install
 
 ```bash
-wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.0.0.zip
-unzip clipvault-1.0.0.zip -d clipvault && cd clipvault
+wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.2.0.zip
+unzip clipvault-1.2.0.zip -d clipvault && cd clipvault
 chmod +x install.sh && ./install.sh
 ```
 
