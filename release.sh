@@ -249,8 +249,17 @@ fi
 cp "$SCRIPT_DIR/packaging/snap/snapcraft.yaml" "$DIST_DIR/snapcraft_${VERSION}.yaml"
 ok "snapcraft.yaml copied to dist"
 
-# ── Step 7: Git tag + GitHub release ─────────────────────────────────────────
-hdr "── Step 7: Git commit, tag and GitHub release"
+# ── Step 7: Sync website screenshot ──────────────────────────────────────────
+hdr "── Step 7: Syncing website screenshot"
+if [[ -f "$SCRIPT_DIR/assets/screenshot.png" ]]; then
+    cp "$SCRIPT_DIR/assets/screenshot.png" "$SCRIPT_DIR/docs/screenshot.png"
+    ok "docs/screenshot.png synced"
+else
+    warn "assets/screenshot.png not found — skipping screenshot sync"
+fi
+
+# ── Step 8: Git tag + GitHub release ─────────────────────────────────────────
+hdr "── Step 8: Git commit, tag and GitHub release"
 
 cd "$SCRIPT_DIR"
 git add -A
