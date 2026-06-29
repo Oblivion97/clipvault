@@ -15,6 +15,14 @@ hdr "━━━━━━━━━━━━━━━━━━━━━━━━━
 hdr "  📋  ClipVault Installer"
 hdr "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Must NOT run as root — GTK apps can't start as root and paths will be wrong
+if [[ "$EUID" -eq 0 ]]; then
+    echo ""
+    err "Do NOT run this installer with sudo. Run it as your normal user:
+    ./install.sh
+The installer will call sudo automatically when needed for system packages."
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="$HOME/.local/share/clipvault"
 AUTOSTART_DIR="$HOME/.config/autostart"
