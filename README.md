@@ -20,8 +20,11 @@ Enter to paste — just like Windows 11 clipboard history.
 | **Win+V shortcut** | Opens history popup from anywhere |
 | **200-item history** | Persists across reboots |
 | **All content types** | Text, links, code snippets, images |
+| **Image previews** | Live thumbnails for copied images |
 | **Instant search** | Filter history by typing |
 | **Keyboard navigation** | ↑↓ arrows, Enter to paste, Del to remove |
+| **System tray icon** | Pause, clear, or open settings from the tray |
+| **Settings page** | Configure history limit, paste speed, privacy, and more |
 | **Wayland + X11** | Works on all modern Linux desktops |
 | **Cross-distro** | Ubuntu, Fedora, Arch, Pop!\_OS, Mint, openSUSE |
 | **Auto-starts** | Runs silently at every login |
@@ -30,11 +33,34 @@ Enter to paste — just like Windows 11 clipboard history.
 
 ## Install
 
+### Debian / Ubuntu / Mint / Pop!_OS / Zorin / elementary OS
+
 ```bash
-wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.5.0.zip
-unzip clipvault-1.5.0.zip -d clipvault && cd clipvault
+sudo dpkg -i clipvault_1.2.0_all.deb
+sudo apt-get install -f
+```
+
+### Fedora
+
+```bash
+sudo dnf install clipvault-1.2.0.noarch.rpm
+```
+
+### openSUSE
+
+```bash
+sudo zypper install clipvault-1.2.0.noarch.rpm
+```
+
+### Arch / Manjaro / Any distro — Universal installer
+
+```bash
+wget https://github.com/Oblivion97/clipvault/releases/latest/download/clipvault-1.2.0.zip
+unzip clipvault-1.2.0.zip && cd clipvault-1.2.0
 chmod +x install.sh && ./install.sh
 ```
+
+Download the latest packages from [GitHub Releases](https://github.com/Oblivion97/clipvault/releases/latest).
 
 The installer automatically:
 - Detects your distro and installs all dependencies (apt / dnf / pacman / zypper)
@@ -66,17 +92,18 @@ The installer automatically:
 
 ## Distro compatibility
 
-| Distro | Status |
+| Distro | Installer |
 |---|---|
-| Ubuntu 20.04 – 24.04 | ✅ Full support |
-| Pop!\_OS | ✅ Full support |
-| Fedora 38+ | ✅ Full support |
-| Arch / Manjaro / EndeavourOS | ✅ Full support |
-| Linux Mint | ✅ Full support |
-| openSUSE Tumbleweed / Leap | ✅ Full support |
-| Debian 11+ | ✅ Full support |
-| Zorin OS | ✅ Full support |
-| elementary OS | ✅ Full support |
+| Ubuntu 20.04 – 24.04 | ✅ `.deb` |
+| Pop!\_OS | ✅ `.deb` |
+| Linux Mint | ✅ `.deb` |
+| Debian 11+ | ✅ `.deb` |
+| Zorin OS | ✅ `.deb` |
+| elementary OS | ✅ `.deb` |
+| Fedora 38+ | ✅ `.rpm` |
+| openSUSE Tumbleweed / Leap | ✅ `.rpm` |
+| Arch / Manjaro / EndeavourOS | ✅ `.zip` |
+| Any Linux with Python 3.8+ | ✅ `.zip` |
 
 ---
 
@@ -148,7 +175,7 @@ python3 clipvault.py
 
 ### Good first issues
 
-Look for issues tagged [`good first issue`](https://github.com/Oblivion97/clipvault/issues?q=label%3A%22good+first+issue%22) — these are small, well-scoped tasks ideal for first-time contributors.
+Look for issues tagged [`good first issue`](https://github.com/Oblivion97/clipvault/issues?q=label%3A%22good+first+issue%22) — small, well-scoped tasks ideal for first-time contributors.
 
 All contributors are welcome regardless of experience level.
 
@@ -157,11 +184,12 @@ All contributors are welcome regardless of experience level.
 ## Publishing a release
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+./release.sh 1.3.0
 ```
 
-GitHub Actions builds the zip and publishes the release automatically.
+This will bump the version, build `.deb`, `.rpm`, and `.zip` packages, commit, tag, push, and upload all assets to a GitHub release automatically.
+
+Requires `gh` CLI to be installed and authenticated: `sudo apt install gh && gh auth login`
 
 ---
 
